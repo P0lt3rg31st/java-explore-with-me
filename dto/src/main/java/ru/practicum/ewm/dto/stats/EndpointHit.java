@@ -7,4 +7,5 @@ public record EndpointHit(
         @NotBlank String uri,
         @NotBlank String ip,
         @NotBlank @EwmDateTime String timestamp
-) {}
+) {
+}

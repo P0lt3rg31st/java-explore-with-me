@@ -14,4 +14,5 @@ public record ApiError(
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime timestamp,
         List<String> errors
-) { }
+) {
+}

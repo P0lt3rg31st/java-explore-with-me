@@ -13,6 +13,8 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = EwmDateTimeValidator.class)
 public @interface EwmDateTime {
     String message() default "Invalid timestamp format. Expected: " + DateTimeFormats.EWM_PATTERN;
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
 }

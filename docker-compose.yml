@@ -9,7 +9,7 @@ services:
     ports:
       - "6541:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ewm -d ewm_stats"]
+      test: [ "CMD-SHELL", "pg_isready -U ewm -d ewm_stats" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,7 +50,7 @@ services:
   # ---- Заготовки под main-service ----
   ewm-db:
     image: postgres:16.1
-    profiles: ["main"]
+    profiles: [ "main" ]
     environment:
       POSTGRES_DB: ewm_main
       POSTGRES_USER: ewm
@@ -61,7 +61,7 @@ services:
       - ewm-db-data:/var/lib/postgresql/data
 
   ewm-service:
-    profiles: ["main"]
+    profiles: [ "main" ]
     ports:
       - "8080:8080"
 

@@ -8,4 +8,5 @@ public record ViewStats(
         @NotBlank String app,
         @NotBlank String uri,
         @NotNull @PositiveOrZero Long hits
-) {}
+) {
+}

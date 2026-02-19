@@ -6,4 +6,5 @@ import ru.practicum.ewm.dto.handler.GlobalExceptionHandler;
 
 @Configuration
 @Import(GlobalExceptionHandler.class)
-public class ErrorHandlingConfig {}
+public class ErrorHandlingConfig {
+}

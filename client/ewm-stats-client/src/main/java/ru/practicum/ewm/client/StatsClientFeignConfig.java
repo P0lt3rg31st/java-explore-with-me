@@ -5,4 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableFeignClients(clients = StatsFeign.class)
-class StatsClientFeignConfig { }
+class StatsClientFeignConfig {
+}
