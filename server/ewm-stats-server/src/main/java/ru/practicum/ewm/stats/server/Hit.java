@@ -3,14 +3,14 @@ package ru.practicum.ewm.stats.server;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Service;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
 @Getter
-@Service
+@Setter
 @Table(name = "hits")
 public class Hit {
     @Id

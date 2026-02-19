@@ -1,7 +1,8 @@
 package ru.practicum.ewm.stats.server.mapper;
 
 import org.mapstruct.Mapper;
-import ru.practicum.ewm.stats.dto.ViewStats;
+import ru.practicum.ewm.dto.ViewStats;
+import ru.practicum.ewm.stats.server.StatsView;
 
 import java.util.List;
 

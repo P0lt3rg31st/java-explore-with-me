@@ -1,4 +1,4 @@
-package ru.practicum.ewm.stats.server.mapper;
+package ru.practicum.ewm.stats.server;
 
 public interface StatsView {
     String getApp();

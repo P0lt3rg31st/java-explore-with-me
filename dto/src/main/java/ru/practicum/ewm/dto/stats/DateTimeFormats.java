@@ -1,4 +1,4 @@
-package ru.practicum.ewm.stats.dto;
+package ru.practicum.ewm.dto.stats;
 
 public final class DateTimeFormats {
     private DateTimeFormats() {}
