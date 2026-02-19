@@ -44,6 +44,9 @@ public class StatsService {
         if (end == null) {
             throw new BadRequestException("end must not be null");
         }
+        if (start.isAfter(end)) {
+            throw new BadRequestException("start must be <= end");
+        }
         if (end.isBefore(start)) {
             throw new BadRequestException("end must be >= start");
         }

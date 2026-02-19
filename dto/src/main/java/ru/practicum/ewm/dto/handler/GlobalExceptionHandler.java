@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -70,4 +71,10 @@ public class GlobalExceptionHandler {
         ApiError body = new ApiError(status.name(), reason, message, LocalDateTime.now(), errors);
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(ServletRequestBindingException.class)
+    public ResponseEntity<ApiError> handleServletBinding(ServletRequestBindingException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Incorrectly made request.", String.valueOf(ex), null);
+    }
+
 }

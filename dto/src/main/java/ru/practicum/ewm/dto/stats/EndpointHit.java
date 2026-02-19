@@ -6,5 +6,5 @@ public record EndpointHit(
         @NotBlank String app,
         @NotBlank String uri,
         @NotBlank String ip,
-        @NotBlank String timestamp
+        @NotBlank @EwmDateTime String timestamp
 ) {}
