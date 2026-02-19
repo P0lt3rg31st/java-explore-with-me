@@ -1,11 +1,13 @@
 package ru.practicum.ewm.stats.server.mapper;
 
+import org.mapstruct.Mapper;
 import org.mapstruct.Named;
 import ru.practicum.ewm.dto.stats.DateTimeFormats;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+@Mapper(componentModel = "spring")
 public class DateTimeMapper {
 
     private static final DateTimeFormatter FMT =

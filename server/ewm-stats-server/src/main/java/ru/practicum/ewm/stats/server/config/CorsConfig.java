@@ -1,0 +1,25 @@
+package ru.practicum.ewm.stats.server.config;
+
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/hit")  // POST
+                .allowedOrigins("http://localhost:8081")
+                .allowedMethods("POST", "OPTIONS")
+                .allowedHeaders("*")
+                .maxAge(3600);
+
+        registry.addMapping("/stats") // GET
+                .allowedOrigins("http://localhost:8081")
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*")
+                .maxAge(3600);
+    }
+}
