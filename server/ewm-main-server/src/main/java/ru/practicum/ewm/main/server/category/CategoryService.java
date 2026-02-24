@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server;
+package ru.practicum.ewm.main.server.category;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -15,6 +15,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
+
+    //TODO: переписать
 
     private final CategoryRepository categoryRepository;
     private final EntityManager em;

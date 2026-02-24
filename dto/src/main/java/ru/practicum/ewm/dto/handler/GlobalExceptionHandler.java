@@ -11,6 +11,7 @@ import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.ewm.dto.handler.exceptions.BadRequestException;
 import ru.practicum.ewm.dto.handler.exceptions.ConflictException;
 import ru.practicum.ewm.dto.handler.exceptions.NotFoundException;
@@ -84,5 +85,16 @@ public class GlobalExceptionHandler {
                 "Integrity constraint has been violated.",
                 ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage(),
                 null);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        String reason = status.is4xxClientError()
+                ? "Incorrectly made request."
+                : "Unexpected error.";
+        String message = ex.getReason() != null ? ex.getReason() : ex.getMessage();
+
+        return build(status, reason, message, null);
     }
 }

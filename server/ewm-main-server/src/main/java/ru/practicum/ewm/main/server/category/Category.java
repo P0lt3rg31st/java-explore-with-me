@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server;
+package ru.practicum.ewm.main.server.category;
 
 import jakarta.persistence.*;
 import lombok.Getter;
