@@ -2,6 +2,7 @@ package ru.practicum.ewm.dto.handler;
 
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -77,4 +78,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Incorrectly made request.", String.valueOf(ex), null);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return build(HttpStatus.CONFLICT,
+                "Integrity constraint has been violated.",
+                ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage(),
+                null);
+    }
 }

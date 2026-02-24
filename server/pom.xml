@@ -13,5 +13,6 @@
 
     <modules>
         <module>ewm-stats-server</module>
+        <module>ewm-main-server</module>
     </modules>
 </project>
