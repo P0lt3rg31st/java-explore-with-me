@@ -1,0 +1,76 @@
+package ru.practicum.ewm.main.server.event;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import ru.practicum.ewm.dto.event.EventFullDto;
+import ru.practicum.ewm.dto.event.EventShortDto;
+
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+import static ru.practicum.ewm.dto.stats.DateTimeFormats.EWM_PATTERN;
+
+@RestController
+@RequestMapping("/events")
+@RequiredArgsConstructor
+@Validated
+public class PublicEventController {
+
+    private final EventService eventService;
+    private final EventMapper eventMapper;
+    private final StatsTracker statsTracker;
+
+    @GetMapping
+    public List<EventShortDto> getEvents(
+            HttpServletRequest request,
+            @RequestParam(required = false) String text,
+            @RequestParam(required = false, name = "categories") List<Long> categoryIds,
+            @RequestParam(required = false) Boolean paid,
+            @RequestParam(required = false) @DateTimeFormat(pattern = EWM_PATTERN) LocalDateTime rangeStart,
+            @RequestParam(required = false) @DateTimeFormat(pattern = EWM_PATTERN) LocalDateTime rangeEnd,
+            @RequestParam(required = false, defaultValue = "false") Boolean onlyAvailable,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false, defaultValue = "0") int from,
+            @RequestParam(required = false, defaultValue = "10") int size
+    ) {
+        statsTracker.hit(request);
+
+        List<Event> events = eventService.searchPublished(
+                text, categoryIds, paid, rangeStart, rangeEnd, from, size
+        );
+
+        Map<Long, Long> viewsById = statsTracker.viewsForEvents(
+                events.stream().map(Event::getId).toList()
+        );
+
+        // TODO: ДЕЛАТЬ ЗАЯВКИ
+        long confirmedRequests = 0L;
+
+        var stream = events.stream();
+
+        if ("VIEWS".equalsIgnoreCase(sort)) {
+            stream = stream.sorted(
+                    Comparator.comparingLong((Event e) -> viewsById.getOrDefault(e.getId(), 0L)).reversed()
+            );
+        }
+
+        return stream
+                .map(e -> eventMapper.toShortDto(e, viewsById.getOrDefault(e.getId(), 0L), confirmedRequests))
+                .toList();
+    }
+
+    @GetMapping("/{id}")
+    public EventFullDto getEvent(HttpServletRequest request, @PathVariable long id) {
+        statsTracker.hit(request);
+
+        Event event = eventService.getPublishedEvent(id);
+        long views = statsTracker.viewsForEvent(id);
+
+        return eventMapper.toFullDto(event, views, 0L);
+    }
+}

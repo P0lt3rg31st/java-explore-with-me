@@ -56,4 +56,9 @@ public class UserService {
             throw new NotFoundException("User with id=" + userId + " was not found");
         }
     }
+
+    public User getById(long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id=" + userId + " was not found"));
+    }
 }

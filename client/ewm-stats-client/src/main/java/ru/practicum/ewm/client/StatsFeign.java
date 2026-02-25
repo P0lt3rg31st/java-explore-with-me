@@ -14,7 +14,7 @@ import java.util.List;
         name = "stats-server",
         url = "${stats.server.url}"
 )
-interface StatsFeign {
+public interface StatsFeign {
 
     @PostMapping(path = "/hit")
     void saveHit(@RequestBody EndpointHit hit);

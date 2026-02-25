@@ -33,6 +33,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByIdsWithOffset(@Param("ids") List<Long> ids,
                                    @Param("from") int from,
                                    @Param("size") int size);
-
-    boolean existsByEmailIgnoreCase(String email);
 }
