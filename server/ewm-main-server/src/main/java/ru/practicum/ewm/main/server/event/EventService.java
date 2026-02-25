@@ -13,8 +13,7 @@ import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.user.User;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -43,12 +42,15 @@ public class EventService {
     public List<Event> getUserEvents(User user, int from, int size) {
         validateNotNull(user);
         validatePagination(from, size);
-        return eventRepository.findAllByInitiatorIdWithOffset(user.getId(), from, size);
+
+        List<Long> ids = eventRepository.findIdsByInitiatorIdWithOffset(user.getId(), from, size);
+        return fetchWithCategoryPreserveOrder(ids);
     }
 
     public Event getUserEvent(User user, long eventId) {
         validateNotNull(user);
-        return eventRepository.findByIdAndInitiatorId(eventId, user.getId())
+
+        return eventRepository.findByIdAndInitiatorIdFetchCategory(eventId, user.getId())
                 .orElseThrow(() -> new NotFoundException("Event was not found."));
     }
 
@@ -84,18 +86,23 @@ public class EventService {
         boolean categoriesApply = categoryIds != null;
         List<Long> cats = categoriesApply ? categoryIds : List.of(-1L);
 
-        return eventRepository.searchPublishedWithOffset(q, cats, categoriesApply, paid, start, rangeEnd, from, size);
+        List<Long> ids = eventRepository.searchPublishedIdsWithOffset(
+                q, cats, categoriesApply, paid, start, rangeEnd, from, size
+        );
+
+        return fetchWithCategoryPreserveOrder(ids);
     }
 
     public List<Event> searchPublishedWithinRadius(double centerLat, double centerLon, double radiusKm, int from, int size) {
         validatePagination(from, size);
         validateRadius(radiusKm);
 
-        return eventRepository.searchPublishedWithinRadiusWithOffset(centerLat, centerLon, radiusKm, from, size);
+        List<Long> ids = eventRepository.searchPublishedWithinRadiusIdsWithOffset(centerLat, centerLon, radiusKm, from, size);
+        return fetchWithCategoryPreserveOrder(ids);
     }
 
     public Event getPublishedEvent(long eventId) {
-        return eventRepository.findByIdAndState(eventId, EventState.PUBLISHED)
+        return eventRepository.findByIdAndStateFetchCategory(eventId, EventState.PUBLISHED)
                 .orElseThrow(() -> new NotFoundException("Event was not found."));
     }
 
@@ -122,18 +129,20 @@ public class EventService {
             return List.of();
         }
 
-        return eventRepository.adminSearchWithOffset(
+        List<Long> ids = eventRepository.adminSearchIdsWithOffset(
                 usersParam, usersApply,
                 statesParam, statesApply,
                 catsParam, categoriesApply,
                 rangeStart, rangeEnd,
                 from, size
         );
+
+        return fetchWithCategoryPreserveOrder(ids);
     }
 
     @Transactional
     public Event adminUpdateEvent(long eventId, Event patch, AdminEventStateAction action) {
-        Event existing = eventRepository.findById(eventId)
+        Event existing = eventRepository.findByIdFetchCategory(eventId)
                 .orElseThrow(() -> new NotFoundException("Event was not found."));
 
         applyPatch(existing, patch);
@@ -145,7 +154,6 @@ public class EventService {
         applyAdminAction(existing, action);
         return eventRepository.save(existing);
     }
-
     // ===== Validation Helpers =====
 
     private void validateNotNull(Object... objects) {
@@ -306,5 +314,19 @@ public class EventService {
             throw new ConflictException("Published event cannot be rejected.");
         }
         event.setState(EventState.CANCELED);
+    }
+    private List<Event> fetchWithCategoryPreserveOrder(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        List<Event> events = eventRepository.findAllByIdInFetchCategory(ids);
+
+        Map<Long, Integer> pos = new HashMap<>(ids.size());
+        for (int i = 0; i < ids.size(); i++) {
+            pos.put(ids.get(i), i);
+        }
+        events.sort(Comparator.comparingInt(e -> pos.getOrDefault(e.getId(), Integer.MAX_VALUE)));
+        return events;
     }
 }
