@@ -128,11 +128,9 @@ public class ParticipationRequestService {
             return new StatusUpdateResult(confirmed, rejected);
         }
 
-        // targetStatus == CONFIRMED
         int limit = event.getParticipantLimit();
         boolean moderationOff = !event.getRequestModeration();
 
-        // если лимита нет или пре-модерация выключена — просто подтверждаем
         if (limit == 0 || moderationOff) {
             for (ParticipationRequest r : requests) {
                 r.setStatus(ParticipationRequestStatus.CONFIRMED);
