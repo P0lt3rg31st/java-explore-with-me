@@ -1,11 +1,9 @@
-package ru.practicum.ewm.main.server.request;
+package ru.practicum.ewm.main.server.compilation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.handler.exceptions.NotFoundException;
-import ru.practicum.ewm.main.server.compilation.Compilation;
-import ru.practicum.ewm.main.server.compilation.repository.CompilationRepository;
 import ru.practicum.ewm.main.server.event.Event;
 import ru.practicum.ewm.main.server.event.EventRepository;
 

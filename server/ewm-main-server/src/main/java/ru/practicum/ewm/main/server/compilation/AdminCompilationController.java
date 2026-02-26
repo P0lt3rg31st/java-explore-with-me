@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server.request;
+package ru.practicum.ewm.main.server.compilation;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.compilation.CompilationDto;
 import ru.practicum.ewm.dto.compilation.NewCompilationDto;
 import ru.practicum.ewm.dto.compilation.UpdateCompilationRequest;
-import ru.practicum.ewm.main.server.compilation.Compilation;
-import ru.practicum.ewm.main.server.compilation.CompilationMapper;
 
 @RestController
 @RequiredArgsConstructor

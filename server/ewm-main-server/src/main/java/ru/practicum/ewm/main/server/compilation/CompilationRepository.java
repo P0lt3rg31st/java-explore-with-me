@@ -1,9 +1,8 @@
-package ru.practicum.ewm.main.server.compilation.repository;
+package ru.practicum.ewm.main.server.compilation;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ru.practicum.ewm.main.server.compilation.Compilation;
 
 import java.util.List;
 import java.util.Optional;

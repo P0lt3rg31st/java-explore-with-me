@@ -7,6 +7,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.EventShortDto;
+import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -24,6 +25,7 @@ public class PublicEventController {
     private final EventService eventService;
     private final EventMapper eventMapper;
     private final StatsTracker statsTracker;
+    private final ParticipationRequestService requestService;
 
     @GetMapping
     public List<EventShortDto> getEvents(
@@ -44,14 +46,21 @@ public class PublicEventController {
                 text, categoryIds, paid, rangeStart, rangeEnd, from, size
         );
 
-        Map<Long, Long> viewsById = statsTracker.viewsForEvents(
-                events.stream().map(Event::getId).toList()
-        );
+        List<Long> ids = events.stream().map(Event::getId).toList();
 
-        // TODO: ДЕЛАТЬ ЗАЯВКИ
-        long confirmedRequests = 0L;
+        Map<Long, Long> viewsById = statsTracker.viewsForEvents(ids);
+        Map<Long, Long> confirmedById = requestService.getConfirmedCountsForEvents(ids);
 
         var stream = events.stream();
+
+        if (Boolean.TRUE.equals(onlyAvailable)) {
+            stream = stream.filter(e -> {
+                int limit = e.getParticipantLimit();
+                if (limit == 0) return true;
+                long confirmed = confirmedById.getOrDefault(e.getId(), 0L);
+                return confirmed < limit;
+            });
+        }
 
         if ("VIEWS".equalsIgnoreCase(sort)) {
             stream = stream.sorted(
@@ -60,7 +69,11 @@ public class PublicEventController {
         }
 
         return stream
-                .map(e -> eventMapper.toShortDto(e, viewsById.getOrDefault(e.getId(), 0L), confirmedRequests))
+                .map(e -> eventMapper.toShortDto(
+                        e,
+                        viewsById.getOrDefault(e.getId(), 0L),
+                        confirmedById.getOrDefault(e.getId(), 0L)
+                ))
                 .toList();
     }
 
@@ -70,7 +83,8 @@ public class PublicEventController {
 
         Event event = eventService.getPublishedEvent(id);
         long views = statsTracker.viewsForEvent(id);
+        long confirmed = requestService.getConfirmedCountForEvent(id);
 
-        return eventMapper.toFullDto(event, views, 0L);
+        return eventMapper.toFullDto(event, views, confirmed);
     }
 }
