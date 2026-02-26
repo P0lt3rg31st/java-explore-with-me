@@ -67,7 +67,7 @@ public class StatsTracker {
 
         List<ViewStats> stats;
         try {
-            stats = statsClient.getStats(start, end, uris, false);
+            stats = statsClient.getStats(start, end, uris, true);
         } catch (Exception ex) {
             log.warn("Stats getStats failed: {}", ex.getMessage());
             return ids.stream().collect(Collectors.toMap(id -> id, id -> 0L));

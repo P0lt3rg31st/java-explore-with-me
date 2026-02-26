@@ -1,5 +1,6 @@
 package ru.practicum.ewm.main.server.event;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
@@ -51,7 +52,7 @@ public class AdminEventController {
     @PatchMapping("/{eventId}")
     public EventFullDto updateEvent(
             @PathVariable long eventId,
-            @RequestBody UpdateEventAdminRequest dto
+            @RequestBody @Valid UpdateEventAdminRequest dto
     ) {
         Category category = (dto.category() == null)
                 ? null
