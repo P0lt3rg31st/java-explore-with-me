@@ -78,7 +78,7 @@ public class EventService {
         boolean categoriesApply = categoryIds != null && !categoryIds.isEmpty();
         List<Long> cats = categoriesApply ? categoryIds : List.of(-1L);
 
-        LocalDateTime start = (rangeStart == null) ? LocalDateTime.now() : rangeStart;
+        LocalDateTime start = (rangeStart == null) ? LocalDateTime.MIN : rangeStart;
         String q = normalizeText(text);
 
         List<Long> ids = eventRepository.searchPublishedIds(
