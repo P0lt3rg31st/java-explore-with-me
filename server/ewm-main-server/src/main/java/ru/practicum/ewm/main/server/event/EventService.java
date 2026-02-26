@@ -127,10 +127,6 @@ public class EventService {
         validatePagination(from, size);
         validateRange(rangeStart, rangeEnd);
 
-        if (isFilterEmpty(userIds) || isFilterEmpty(categoryIds) || isFilterEmpty(states)) {
-            return List.of();
-        }
-
         boolean usersApply = userIds != null;
         boolean categoriesApply = categoryIds != null;
         boolean statesApply = states != null;
@@ -237,10 +233,6 @@ public class EventService {
         if (event.getCreatedOn() == null) {
             event.setCreatedOn(LocalDateTime.now());
         }
-    }
-
-    private boolean isFilterEmpty(List<?> list) {
-        return list != null && list.isEmpty();
     }
 
     private List<String> prepareStatesParam(List<String> states, boolean statesApply) {
