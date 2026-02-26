@@ -39,7 +39,7 @@ public class PublicEventController {
             @RequestParam(required = false, defaultValue = "0") int from,
             @RequestParam(required = false, defaultValue = "10") int size
     ) {
-        statsTracker.hit(request);
+        statsTracker.countHit(request);
 
         List<Event> events = eventService.searchPublished(
                 text, categoryIds, paid, rangeStart, rangeEnd, from, size
@@ -64,7 +64,7 @@ public class PublicEventController {
 
     @GetMapping("/{id}")
     public EventFullDto getEvent(HttpServletRequest request, @PathVariable long id) {
-        statsTracker.hit(request);
+        statsTracker.countHit(request);
 
         Event event = eventService.getPublishedEvent(id);
         long views = statsTracker.viewsForEvent(id);

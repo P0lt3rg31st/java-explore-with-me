@@ -28,20 +28,30 @@ public class StatsTracker {
     @Value("${app.name:ewm-main-service}")
     private String appName;
 
-    public void hit(HttpServletRequest request) {
-        if (request == null) {
-            return;
-        }
+    public void countHit(HttpServletRequest request) {
+        if (request == null) return;
 
         try {
-            String ip = request.getRemoteAddr();
+            String ip = extractClientIp(request);
             String uri = request.getRequestURI();
             String timestamp = LocalDateTime.now().format(FMT);
 
             statsClient.saveHit(new EndpointHit(appName, uri, ip, timestamp));
         } catch (Exception ex) {
-            log.warn("Stats hit failed: {}", ex.getMessage());
+            log.warn("Stats countHit failed: {}", ex.getMessage());
         }
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        String xri = request.getHeader("X-Real-IP");
+        if (xri != null && !xri.isBlank()) {
+            return xri.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     public long viewsForEvent(long eventId) {
