@@ -89,20 +89,27 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query(
             value = """
-                    select e.id
-                    from events e
-                    where e.state = 'PUBLISHED'
-                      and distance(e.lat, e.lon, :centerLat, :centerLon) <= :radiusKm
-                    order by e.event_date asc
-                    limit :size offset :from
-                    """,
+                select e.id
+                from events e
+                where e.state = 'PUBLISHED'
+                  and (:text is null
+                       or (lower(e.annotation) like lower(concat('%', :text, '%'))
+                           or lower(e.description) like lower(concat('%', :text, '%'))
+                           or lower(e.title) like lower(concat('%', :text, '%'))))
+                  and (:paid is null or e.paid = :paid)
+                  and (e.event_date >= :rangeStart)
+                  and (e.event_date <= coalesce(cast(:rangeEnd as timestamp), timestamp '9999-12-31 23:59:59'))
+                  and (:categoriesApply = false or e.category_id in (:categoryIds))
+                order by e.event_date asc
+                """,
             nativeQuery = true
     )
-    List<Long> searchPublishedWithinRadiusIdsWithOffset(@Param("centerLat") double centerLat,
-                                                        @Param("centerLon") double centerLon,
-                                                        @Param("radiusKm") double radiusKm,
-                                                        @Param("from") int from,
-                                                        @Param("size") int size);
+    List<Long> searchPublishedIds(@Param("text") String text,
+                                  @Param("categoryIds") List<Long> categoryIds,
+                                  @Param("categoriesApply") boolean categoriesApply,
+                                  @Param("paid") Boolean paid,
+                                  @Param("rangeStart") LocalDateTime rangeStart,
+                                  @Param("rangeEnd") LocalDateTime rangeEnd);
 
     @Query("""
             select e

@@ -68,7 +68,7 @@ public class StatsTracker {
             return Map.of();
         }
 
-        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime end = LocalDateTime.now().plusSeconds(1);
         LocalDateTime start = end.minusYears(1);
 
         List<String> uris = ids.stream()

@@ -40,20 +40,23 @@ public class PublicEventController {
             @RequestParam(required = false, defaultValue = "10") int size
     ) {
         statsTracker.countHit(request);
-
         List<Event> events = eventService.searchPublished(
-                text, categoryIds, paid, rangeStart, rangeEnd, from, size
+                text, categoryIds, paid, rangeStart, rangeEnd
         );
 
         List<Long> ids = events.stream().map(Event::getId).toList();
-
         Map<Long, Long> viewsById = statsTracker.viewsForEvents(ids);
         Map<Long, Long> confirmedById = requestService.getConfirmedCountsForEvents(ids);
+
         List<Event> prepared = eventService.applyPublicAvailabilityAndSort(
                 events, onlyAvailable, sort, viewsById, confirmedById
         );
 
-        return prepared.stream()
+        int startIdx = Math.min(from, prepared.size());
+        int endIdx = Math.min(from + size, prepared.size());
+        List<Event> page = prepared.subList(startIdx, endIdx);
+
+        return page.stream()
                 .map(e -> eventMapper.toShortDto(
                         e,
                         viewsById.getOrDefault(e.getId(), 0L),

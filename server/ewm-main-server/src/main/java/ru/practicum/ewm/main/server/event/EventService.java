@@ -72,32 +72,19 @@ public class EventService {
     // ===== Public =====
 
     public List<Event> searchPublished(String text, List<Long> categoryIds, Boolean paid,
-                                       LocalDateTime rangeStart, LocalDateTime rangeEnd, int from, int size) {
-        validatePagination(from, size);
+                                       LocalDateTime rangeStart, LocalDateTime rangeEnd) {
         validateRange(rangeStart, rangeEnd);
 
-        if (isFilterEmpty(categoryIds)) {
-            return List.of();
-        }
+        boolean categoriesApply = categoryIds != null && !categoryIds.isEmpty();
+        List<Long> cats = categoriesApply ? categoryIds : List.of(-1L);
 
         LocalDateTime start = (rangeStart == null) ? LocalDateTime.now() : rangeStart;
         String q = normalizeText(text);
 
-        boolean categoriesApply = categoryIds != null;
-        List<Long> cats = categoriesApply ? categoryIds : List.of(-1L);
-
-        List<Long> ids = eventRepository.searchPublishedIdsWithOffset(
-                q, cats, categoriesApply, paid, start, rangeEnd, from, size
+        List<Long> ids = eventRepository.searchPublishedIds(
+                q, cats, categoriesApply, paid, start, rangeEnd
         );
 
-        return fetchWithCategoryPreserveOrder(ids);
-    }
-
-    public List<Event> searchPublishedWithinRadius(double centerLat, double centerLon, double radiusKm, int from, int size) {
-        validatePagination(from, size);
-        validateRadius(radiusKm);
-
-        List<Long> ids = eventRepository.searchPublishedWithinRadiusIdsWithOffset(centerLat, centerLon, radiusKm, from, size);
         return fetchWithCategoryPreserveOrder(ids);
     }
 
