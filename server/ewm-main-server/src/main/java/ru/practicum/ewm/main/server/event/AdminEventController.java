@@ -9,6 +9,7 @@ import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.UpdateEventAdminRequest;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.category.CategoryService;
+import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +28,7 @@ public class AdminEventController {
 
     private final CategoryService categoryService;
     private final StatsTracker statsTracker;
+    private final ParticipationRequestService requestService;
 
     @GetMapping
     public List<EventFullDto> getEvents(
@@ -42,10 +44,20 @@ public class AdminEventController {
                 userIds, states, categoryIds, rangeStart, rangeEnd, from, size
         );
 
-        Map<Long, Long> viewsById = statsTracker.viewsForEvents(events.stream().map(Event::getId).toList());
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> ids = events.stream().map(Event::getId).toList();
+        Map<Long, Long> viewsById = statsTracker.viewsForEvents(ids);
+        Map<Long, Long> confirmedById = requestService.getConfirmedCountsForEvents(ids);
 
         return events.stream()
-                .map(e -> eventMapper.toFullDto(e, viewsById.getOrDefault(e.getId(), 0L), 0L))
+                .map(e -> eventMapper.toFullDto(
+                        e,
+                        viewsById.getOrDefault(e.getId(), 0L),
+                        confirmedById.getOrDefault(e.getId(), 0L)
+                ))
                 .toList();
     }
 
@@ -64,6 +76,8 @@ public class AdminEventController {
         Event updated = eventService.adminUpdateEvent(eventId, patch, dto.stateAction());
 
         long views = statsTracker.viewsForEvent(updated.getId());
-        return eventMapper.toFullDto(updated, views, 0L);
+        long confirmed = requestService.getConfirmedCountForEvent(updated.getId());
+
+        return eventMapper.toFullDto(updated, views, confirmed);
     }
 }

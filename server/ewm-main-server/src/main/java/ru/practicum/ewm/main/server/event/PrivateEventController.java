@@ -11,6 +11,7 @@ import ru.practicum.ewm.dto.event.NewEventDto;
 import ru.practicum.ewm.dto.event.UpdateEventUserRequest;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.category.CategoryService;
+import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 import ru.practicum.ewm.main.server.user.User;
 import ru.practicum.ewm.main.server.user.UserService;
 
@@ -30,6 +31,7 @@ public class PrivateEventController {
     private final CategoryService categoryService;
 
     private final StatsTracker statsTracker;
+    private final ParticipationRequestService requestService;
 
     @GetMapping
     public List<EventShortDto> getUserEvents(
@@ -40,10 +42,20 @@ public class PrivateEventController {
         User user = userService.getById(userId);
         List<Event> events = eventService.getUserEvents(user, from, size);
 
-        Map<Long, Long> viewsById = statsTracker.viewsForEvents(events.stream().map(Event::getId).toList());
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> ids = events.stream().map(Event::getId).toList();
+        Map<Long, Long> viewsById = statsTracker.viewsForEvents(ids);
+        Map<Long, Long> confirmedById = requestService.getConfirmedCountsForEvents(ids);
 
         return events.stream()
-                .map(e -> eventMapper.toShortDto(e, viewsById.getOrDefault(e.getId(), 0L), 0L))
+                .map(e -> eventMapper.toShortDto(
+                        e,
+                        viewsById.getOrDefault(e.getId(), 0L),
+                        confirmedById.getOrDefault(e.getId(), 0L)
+                ))
                 .toList();
     }
 
@@ -71,7 +83,9 @@ public class PrivateEventController {
         Event event = eventService.getUserEvent(user, eventId);
 
         long views = statsTracker.viewsForEvent(event.getId());
-        return eventMapper.toFullDto(event, views, 0L);
+        long confirmed = requestService.getConfirmedCountForEvent(event.getId());
+
+        return eventMapper.toFullDto(event, views, confirmed);
     }
 
     @PatchMapping("/{eventId}")
@@ -92,6 +106,8 @@ public class PrivateEventController {
         Event updated = eventService.updateUserEvent(user, eventId, patch, dto.stateAction());
 
         long views = statsTracker.viewsForEvent(updated.getId());
-        return eventMapper.toFullDto(updated, views, 0L);
+        long confirmed = requestService.getConfirmedCountForEvent(updated.getId());
+
+        return eventMapper.toFullDto(updated, views, confirmed);
     }
 }
