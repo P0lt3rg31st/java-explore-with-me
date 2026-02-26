@@ -4,5 +4,5 @@ ALTER TABLE events
 
 ALTER TABLE events
     ADD CONSTRAINT fk_event_initiator
-        FOREIGN KEY (initiator_id) REFERENCES users(id)
+        FOREIGN KEY (initiator_id) REFERENCES users (id)
             ON DELETE CASCADE;

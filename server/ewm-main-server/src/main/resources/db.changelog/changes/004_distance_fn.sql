@@ -1,7 +1,10 @@
 --liquibase formatted sql
 
 --changeset petrichor:004-distance-fn splitStatements:false endDelimiter:$$
-CREATE OR REPLACE FUNCTION distance(lat1 double precision, lon1 double precision,
+CREATE
+OR
+REPLACE
+FUNCTION distance(lat1 double precision, lon1 double precision,
                                     lat2 double precision, lon2 double precision)
 RETURNS double precision
 AS $$

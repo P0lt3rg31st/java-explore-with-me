@@ -7,4 +7,5 @@ public record NewCategoryDto(
         @NotBlank(message = "Category name must not be blank")
         @Size(max = 50, message = "Category name length must be <= 50")
         String name
-) {}
+) {
+}

@@ -1,7 +1,6 @@
 package ru.practicum.ewm.main.server.category;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -25,14 +24,12 @@ public class CategoryService {
     public List<Category> findAll(int from, int size) {
         validatePagination(from, size);
 
-        TypedQuery<Category> query = em.createQuery(
-                "select c from Category c order by c.id asc",
-                Category.class
-        );
-        query.setFirstResult(from);
-        query.setMaxResults(size);
+        List<Long> ids = categoryRepository.findIdsWithOffset(from, size);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
 
-        return query.getResultList();
+        return categoryRepository.findAllByIdInOrdered(ids);
     }
 
     @Transactional(readOnly = true)

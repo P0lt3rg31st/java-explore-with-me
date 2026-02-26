@@ -106,6 +106,33 @@ public class EventService {
                 .orElseThrow(() -> new NotFoundException("Event was not found."));
     }
 
+    public List<Event> applyPublicAvailabilityAndSort(List<Event> events,
+                                                      Boolean onlyAvailable,
+                                                      String sort,
+                                                      Map<Long, Long> viewsById,
+                                                      Map<Long, Long> confirmedById) {
+        validateNotNull(events, viewsById, confirmedById);
+        validatePublicSort(sort);
+
+        var stream = events.stream();
+
+        if (Boolean.TRUE.equals(onlyAvailable)) {
+            stream = stream.filter(e -> isAvailable(e, confirmedById));
+        }
+
+        if ("VIEWS".equalsIgnoreCase(sort)) {
+            stream = stream.sorted(
+                    Comparator.comparingLong((Event e) -> viewsById.getOrDefault(e.getId(), 0L)).reversed()
+            );
+        }
+
+        if ("EVENT_DATE".equalsIgnoreCase(sort)) {
+            stream = stream.sorted(Comparator.comparing(Event::getEventDate));
+        }
+
+        return stream.toList();
+    }
+
     // ===== Admin =====
 
     public List<Event> adminSearch(List<Long> userIds, List<String> states, List<Long> categoryIds,
@@ -315,6 +342,7 @@ public class EventService {
         }
         event.setState(EventState.CANCELED);
     }
+
     private List<Event> fetchWithCategoryPreserveOrder(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -328,5 +356,21 @@ public class EventService {
         }
         events.sort(Comparator.comparingInt(e -> pos.getOrDefault(e.getId(), Integer.MAX_VALUE)));
         return events;
+    }
+
+    private boolean isAvailable(Event e, Map<Long, Long> confirmedById) {
+        int limit = e.getParticipantLimit();
+        if (limit == 0) return true;
+        long confirmed = confirmedById.getOrDefault(e.getId(), 0L);
+        return confirmed < limit;
+    }
+
+    private void validatePublicSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return;
+        }
+        if (!"VIEWS".equalsIgnoreCase(sort) && !"EVENT_DATE".equalsIgnoreCase(sort)) {
+            throw new BadRequestException("Incorrectly made request.");
+        }
     }
 }

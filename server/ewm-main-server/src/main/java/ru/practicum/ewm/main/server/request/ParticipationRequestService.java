@@ -25,16 +25,12 @@ public class ParticipationRequestService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
-    public record StatusUpdateResult(List<ParticipationRequest> confirmed,
-                                     List<ParticipationRequest> rejected) {
-    }
-
-    // ===== Private =====
-
     public List<ParticipationRequest> getUserRequests(long userId) {
         ensureUserExists(userId);
         return requestRepository.findAllByRequesterIdFetchAll(userId);
     }
+
+    // ===== Private =====
 
     @Transactional
     public ParticipationRequest addParticipationRequest(long userId, long eventId) {
@@ -83,14 +79,14 @@ public class ParticipationRequestService {
         return requestRepository.save(request);
     }
 
-    // ===== Private =====
-
     public List<ParticipationRequest> getEventRequests(long userId, long eventId) {
         ensureUserExists(userId);
 
         Event event = getOwnedEventOrThrow(userId, eventId);
         return requestRepository.findAllByEventIdFetchAll(event.getId());
     }
+
+    // ===== Private =====
 
     @Transactional
     public StatusUpdateResult updateRequestStatuses(long userId,
@@ -108,7 +104,6 @@ public class ParticipationRequestService {
         List<Long> ids = new ArrayList<>(requestIds);
         List<ParticipationRequest> requests = requestRepository.findAllByEventIdAndIdInFetchAll(eventId, ids);
 
-        // проверка "все ли id реально относятся к этому событию"
         Set<Long> found = requests.stream().map(ParticipationRequest::getId).collect(Collectors.toSet());
         Set<Long> missing = new HashSet<>(requestIds);
         missing.removeAll(found);
@@ -116,10 +111,8 @@ public class ParticipationRequestService {
             throw new NotFoundException("Request(s) not found: " + missing);
         }
 
-        // менять можно только PENDING
         boolean hasNotPending = requests.stream().anyMatch(r -> r.getStatus() != ParticipationRequestStatus.PENDING);
         if (hasNotPending) {
-            // в спеках это встречается как 400/409; по смыслу — нарушение условий операции
             throw new ConflictException("Request must have status PENDING");
         }
 
@@ -170,20 +163,19 @@ public class ParticipationRequestService {
         return new StatusUpdateResult(confirmed, rejected);
     }
 
-    // ===== Helpers =====
-
     private void ensureUserExists(long userId) {
         if (!userRepository.existsById(userId)) {
             throw new NotFoundException("User with id=" + userId + " was not found");
         }
     }
 
+    // ===== Helpers =====
+
     private Event getOwnedEventOrThrow(long userId, long eventId) {
         Event event = eventRepository.findByIdFetchCategory(eventId)
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
 
         if (event.getInitiator().getId() != userId) {
-            // для приватных эндпоинтов обычно "не найдено или недоступно"
             throw new NotFoundException("Event with id=" + eventId + " was not found");
         }
         return event;
@@ -212,5 +204,9 @@ public class ParticipationRequestService {
     @Transactional(readOnly = true)
     public long getConfirmedCountForEvent(long eventId) {
         return requestRepository.countByEvent_IdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
+    }
+
+    public record StatusUpdateResult(List<ParticipationRequest> confirmed,
+                                     List<ParticipationRequest> rejected) {
     }
 }

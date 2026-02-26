@@ -10,11 +10,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query(
             value = """
-                select *
-                from users u
-                order by u.id asc
-                limit :size offset :from
-                """,
+                    select *
+                    from users u
+                    order by u.id asc
+                    limit :size offset :from
+                    """,
             nativeQuery = true
     )
     List<User> findAllWithOffset(@Param("from") int from,
@@ -22,12 +22,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query(
             value = """
-                select *
-                from users u
-                where u.id in (:ids)
-                order by u.id asc
-                limit :size offset :from
-                """,
+                    select *
+                    from users u
+                    where u.id in (:ids)
+                    order by u.id asc
+                    limit :size offset :from
+                    """,
             nativeQuery = true
     )
     List<User> findByIdsWithOffset(@Param("ids") List<Long> ids,

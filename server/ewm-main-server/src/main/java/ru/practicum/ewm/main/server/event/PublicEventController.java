@@ -10,7 +10,6 @@ import ru.practicum.ewm.dto.event.EventShortDto;
 import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -50,25 +49,11 @@ public class PublicEventController {
 
         Map<Long, Long> viewsById = statsTracker.viewsForEvents(ids);
         Map<Long, Long> confirmedById = requestService.getConfirmedCountsForEvents(ids);
+        List<Event> prepared = eventService.applyPublicAvailabilityAndSort(
+                events, onlyAvailable, sort, viewsById, confirmedById
+        );
 
-        var stream = events.stream();
-
-        if (Boolean.TRUE.equals(onlyAvailable)) {
-            stream = stream.filter(e -> {
-                int limit = e.getParticipantLimit();
-                if (limit == 0) return true;
-                long confirmed = confirmedById.getOrDefault(e.getId(), 0L);
-                return confirmed < limit;
-            });
-        }
-
-        if ("VIEWS".equalsIgnoreCase(sort)) {
-            stream = stream.sorted(
-                    Comparator.comparingLong((Event e) -> viewsById.getOrDefault(e.getId(), 0L)).reversed()
-            );
-        }
-
-        return stream
+        return prepared.stream()
                 .map(e -> eventMapper.toShortDto(
                         e,
                         viewsById.getOrDefault(e.getId(), 0L),

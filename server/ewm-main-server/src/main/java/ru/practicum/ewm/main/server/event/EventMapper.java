@@ -1,21 +1,8 @@
 package ru.practicum.ewm.main.server.event;
 
-import org.mapstruct.BeanMapping;
-import org.mapstruct.InjectionStrategy;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.mapstruct.ReportingPolicy;
-
-
-
+import org.mapstruct.*;
 import ru.practicum.ewm.dto.category.CategoryDto;
-import ru.practicum.ewm.dto.event.EventFullDto;
-import ru.practicum.ewm.dto.event.EventShortDto;
-import ru.practicum.ewm.dto.event.NewEventDto;
-import ru.practicum.ewm.dto.event.UpdateEventAdminRequest;
-import ru.practicum.ewm.dto.event.UpdateEventUserRequest;
+import ru.practicum.ewm.dto.event.*;
 import ru.practicum.ewm.dto.user.UserShortDto;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.user.User;
