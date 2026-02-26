@@ -55,7 +55,6 @@ services:
   ewm-db:
     image: postgres:16.1
     container_name: ewm-db
-    profiles: [ "main" ]
     environment:
       POSTGRES_DB: ewm_main
       POSTGRES_USER: ewm
@@ -75,7 +74,6 @@ services:
       context: .
       dockerfile: server/ewm-main-server/Dockerfile
     container_name: ewm-service
-    profiles: [ "main" ]
     ports:
       - "8080:8080"
     depends_on:
