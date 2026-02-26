@@ -15,7 +15,9 @@ COPY client/pom.xml /app/client/pom.xml
 COPY client/ewm-stats-client/pom.xml /app/client/ewm-stats-client/pom.xml
 
 # Тянем зависимости под нужный модуль
-RUN mvn -q -pl server/ewm-main-server -am -DskipTests dependency:go-offline
+RUN mvn -q -pl server/ewm-main-server -am -DskipTests dependency:go-offline \
+  -Dmaven.wagon.http.retryHandler.count=5 \
+  -Dmaven.wagon.http.retryHandler.requestSentEnabled=true
 
 # Исходники
 COPY dto /app/dto
@@ -23,13 +25,15 @@ COPY client /app/client
 COPY server /app/server
 
 # Сборка main
-RUN mvn -q -pl server/ewm-main-server -am -DskipTests package
+RUN mvn -q -pl server/ewm-main-server -am -DskipTests package \
+  -Dmaven.wagon.http.retryHandler.count=5 \
+  -Dmaven.wagon.http.retryHandler.requestSentEnabled=true
 
 # ---------- runtime stage ----------
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /app/server/ewm-main-server/target/*.jar app.jar
+COPY --from=build /app/server/ewm-main-server/target/*SNAPSHOT.jar app.jar
 
 ENV JAVA_OPTS=""
 EXPOSE 8080
