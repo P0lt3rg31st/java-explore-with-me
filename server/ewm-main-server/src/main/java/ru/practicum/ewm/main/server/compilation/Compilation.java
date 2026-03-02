@@ -2,7 +2,7 @@ package ru.practicum.ewm.main.server.compilation;
 
 import jakarta.persistence.*;
 import lombok.*;
-import ru.practicum.ewm.main.server.event.Event;
+import ru.practicum.ewm.main.server.event.model.Event;
 
 import java.util.LinkedHashSet;
 import java.util.Set;

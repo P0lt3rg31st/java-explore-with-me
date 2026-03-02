@@ -1,4 +1,4 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.common;
 
 import jakarta.validation.constraints.NotNull;
 

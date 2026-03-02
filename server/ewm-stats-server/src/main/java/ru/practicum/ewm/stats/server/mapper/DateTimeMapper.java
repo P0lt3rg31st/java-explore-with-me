@@ -2,7 +2,7 @@ package ru.practicum.ewm.stats.server.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Named;
-import ru.practicum.ewm.dto.stats.DateTimeFormats;
+import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

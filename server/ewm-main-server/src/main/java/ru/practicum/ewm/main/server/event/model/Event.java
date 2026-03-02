@@ -1,8 +1,8 @@
-package ru.practicum.ewm.main.server.event;
+package ru.practicum.ewm.main.server.event.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import ru.practicum.ewm.dto.event.EventState;
+import ru.practicum.ewm.dto.event.state.EventState;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.user.User;
 

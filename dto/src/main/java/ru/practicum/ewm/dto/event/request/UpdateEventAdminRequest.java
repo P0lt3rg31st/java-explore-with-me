@@ -1,10 +1,12 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
+import ru.practicum.ewm.dto.event.common.Location;
+import ru.practicum.ewm.dto.event.state.AdminEventStateAction;
 
 import java.time.LocalDateTime;
 

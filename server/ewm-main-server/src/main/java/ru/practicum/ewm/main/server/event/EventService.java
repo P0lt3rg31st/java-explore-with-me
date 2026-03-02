@@ -3,13 +3,14 @@ package ru.practicum.ewm.main.server.event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.ewm.dto.event.AdminEventStateAction;
-import ru.practicum.ewm.dto.event.EventState;
-import ru.practicum.ewm.dto.event.UserEventStateAction;
+import ru.practicum.ewm.dto.event.state.AdminEventStateAction;
+import ru.practicum.ewm.dto.event.state.EventState;
+import ru.practicum.ewm.dto.event.state.UserEventStateAction;
 import ru.practicum.ewm.dto.handler.exceptions.BadRequestException;
 import ru.practicum.ewm.dto.handler.exceptions.ConflictException;
 import ru.practicum.ewm.dto.handler.exceptions.NotFoundException;
 import ru.practicum.ewm.main.server.category.Category;
+import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.user.User;
 
 import java.time.LocalDateTime;
@@ -176,12 +177,6 @@ public class EventService {
 
     private void validatePagination(int from, int size) {
         if (from < 0 || size <= 0) {
-            throw new BadRequestException("Incorrectly made request.");
-        }
-    }
-
-    private void validateRadius(double radiusKm) {
-        if (radiusKm < 0) {
             throw new BadRequestException("Incorrectly made request.");
         }
     }

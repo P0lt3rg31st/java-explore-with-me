@@ -1,16 +1,20 @@
-package ru.practicum.ewm.main.server.event;
+package ru.practicum.ewm.main.server.event.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.dto.event.EventFullDto;
-import ru.practicum.ewm.dto.event.EventShortDto;
-import ru.practicum.ewm.dto.event.NewEventDto;
-import ru.practicum.ewm.dto.event.UpdateEventUserRequest;
+import ru.practicum.ewm.dto.event.response.EventFullDto;
+import ru.practicum.ewm.dto.event.response.EventShortDto;
+import ru.practicum.ewm.dto.event.request.NewEventDto;
+import ru.practicum.ewm.dto.event.request.UpdateEventUserRequest;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.category.CategoryService;
+import ru.practicum.ewm.main.server.event.model.Event;
+import ru.practicum.ewm.main.server.event.EventMapper;
+import ru.practicum.ewm.main.server.event.EventService;
+import ru.practicum.ewm.main.server.event.StatsTracker;
 import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 import ru.practicum.ewm.main.server.user.User;
 import ru.practicum.ewm.main.server.user.UserService;

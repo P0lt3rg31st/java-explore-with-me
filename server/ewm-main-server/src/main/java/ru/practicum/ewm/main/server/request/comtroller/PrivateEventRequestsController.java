@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server.request;
+package ru.practicum.ewm.main.server.request.comtroller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -9,6 +9,9 @@ import ru.practicum.ewm.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.dto.request.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.dto.request.ParticipationRequestDto;
 import ru.practicum.ewm.dto.request.ParticipationRequestStatus;
+import ru.practicum.ewm.main.server.request.ParticipationRequest;
+import ru.practicum.ewm.main.server.request.ParticipationRequestMapper;
+import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.util.List;
 

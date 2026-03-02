@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import ru.practicum.ewm.dto.request.ParticipationRequestStatus;
-import ru.practicum.ewm.main.server.event.Event;
+import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.user.User;
 
 import java.time.LocalDateTime;

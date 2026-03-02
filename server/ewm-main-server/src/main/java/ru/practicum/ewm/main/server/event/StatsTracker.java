@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.client.StatsClient;
-import ru.practicum.ewm.dto.stats.DateTimeFormats;
+import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 import ru.practicum.ewm.dto.stats.EndpointHit;
 import ru.practicum.ewm.dto.stats.ViewStats;
 

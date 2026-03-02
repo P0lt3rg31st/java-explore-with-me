@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server.category;
+package ru.practicum.ewm.main.server.category.controller;
 
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.category.CategoryDto;
+import ru.practicum.ewm.main.server.category.CategoryMapper;
+import ru.practicum.ewm.main.server.category.CategoryService;
 
 import java.util.List;
 

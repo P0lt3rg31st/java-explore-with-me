@@ -1,6 +1,6 @@
 package ru.practicum.ewm.dto.compilation;
 
-import ru.practicum.ewm.dto.event.EventShortDto;
+import ru.practicum.ewm.dto.event.response.EventShortDto;
 
 import java.util.List;
 

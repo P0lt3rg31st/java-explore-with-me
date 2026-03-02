@@ -1,35 +1,47 @@
 package ru.practicum.ewm.main.server.event;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ru.practicum.ewm.dto.event.EventState;
+import ru.practicum.ewm.dto.event.state.EventState;
+import ru.practicum.ewm.main.server.event.model.Event;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    // ===== Fetch helpers =====
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    List<Event> findAllByIdIn(Collection<Long> ids);
 
-    @Query("""
-            select e
-            from Event e
-            join fetch e.category
-            join fetch e.initiator
-            where e.id in :ids
-            """)
-    List<Event> findAllByIdInFetchCategory(@Param("ids") List<Long> ids);
+    default List<Event> findAllByIdInFetchCategory(List<Long> ids) {
+        return findAllByIdIn(ids);
+    }
 
-    @Query("""
-            select e
-            from Event e
-            join fetch e.category
-            join fetch e.initiator
-            where e.id = :id
-            """)
-    Optional<Event> findByIdFetchCategory(@Param("id") long id);
+    @Override
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    Optional<Event> findById(Long id);
+
+    default Optional<Event> findByIdFetchCategory(long id) {
+        return findById(id);
+    }
+
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    Optional<Event> findByIdAndInitiator_Id(Long id, Long initiatorId);
+
+    default Optional<Event> findByIdAndInitiatorIdFetchCategory(long id, long initiatorId) {
+        return findByIdAndInitiator_Id(id, initiatorId);
+    }
+
+    @EntityGraph(attributePaths = {"category", "initiator"})
+    Optional<Event> findByIdAndState(Long id, EventState state);
+
+    default Optional<Event> findByIdAndStateFetchCategory(long id, EventState state) {
+        return findByIdAndState(id, state);
+    }
 
     // ===== Private =====
 
@@ -46,17 +58,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Long> findIdsByInitiatorIdWithOffset(@Param("userId") long userId,
                                               @Param("from") int from,
                                               @Param("size") int size);
-
-    @Query("""
-            select e
-            from Event e
-            join fetch e.category
-            join fetch e.initiator
-            where e.id = :id
-              and e.initiator.id = :initiatorId
-            """)
-    Optional<Event> findByIdAndInitiatorIdFetchCategory(@Param("id") long id,
-                                                        @Param("initiatorId") long initiatorId);
 
     // ===== Public =====
 
@@ -89,19 +90,19 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query(
             value = """
-                select e.id
-                from events e
-                where e.state = 'PUBLISHED'
-                  and (:text is null
-                       or (lower(e.annotation) like lower(concat('%', :text, '%'))
-                           or lower(e.description) like lower(concat('%', :text, '%'))
-                           or lower(e.title) like lower(concat('%', :text, '%'))))
-                  and (:paid is null or e.paid = :paid)
-                  and (e.event_date >= :rangeStart)
-                  and (e.event_date <= coalesce(cast(:rangeEnd as timestamp), timestamp '9999-12-31 23:59:59'))
-                  and (:categoriesApply = false or e.category_id in (:categoryIds))
-                order by e.event_date asc
-                """,
+                    select e.id
+                    from events e
+                    where e.state = 'PUBLISHED'
+                      and (:text is null
+                           or (lower(e.annotation) like lower(concat('%', :text, '%'))
+                               or lower(e.description) like lower(concat('%', :text, '%'))
+                               or lower(e.title) like lower(concat('%', :text, '%'))))
+                      and (:paid is null or e.paid = :paid)
+                      and (e.event_date >= :rangeStart)
+                      and (e.event_date <= coalesce(cast(:rangeEnd as timestamp), timestamp '9999-12-31 23:59:59'))
+                      and (:categoriesApply = false or e.category_id in (:categoryIds))
+                    order by e.event_date asc
+                    """,
             nativeQuery = true
     )
     List<Long> searchPublishedIds(@Param("text") String text,
@@ -111,16 +112,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                   @Param("rangeStart") LocalDateTime rangeStart,
                                   @Param("rangeEnd") LocalDateTime rangeEnd);
 
-    @Query("""
-            select e
-            from Event e
-            join fetch e.category
-            join fetch e.initiator
-            where e.id = :id
-              and e.state = :state
-            """)
-    Optional<Event> findByIdAndStateFetchCategory(@Param("id") long id,
-                                                  @Param("state") EventState state);
     // ===== Admin =====
 
     @Query(

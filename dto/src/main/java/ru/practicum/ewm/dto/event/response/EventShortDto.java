@@ -1,4 +1,4 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import ru.practicum.ewm.dto.category.CategoryDto;

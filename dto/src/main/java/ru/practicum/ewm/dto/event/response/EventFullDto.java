@@ -1,7 +1,9 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import ru.practicum.ewm.dto.category.CategoryDto;
+import ru.practicum.ewm.dto.event.common.Location;
+import ru.practicum.ewm.dto.event.state.EventState;
 import ru.practicum.ewm.dto.user.UserShortDto;
 
 import java.time.LocalDateTime;

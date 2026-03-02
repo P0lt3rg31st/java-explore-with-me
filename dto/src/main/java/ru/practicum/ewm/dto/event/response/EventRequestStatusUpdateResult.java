@@ -1,4 +1,4 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.response;
 
 
 import ru.practicum.ewm.dto.request.ParticipationRequestDto;

@@ -1,21 +1,25 @@
-package ru.practicum.ewm.main.server.event;
+package ru.practicum.ewm.main.server.event.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.dto.event.EventFullDto;
-import ru.practicum.ewm.dto.event.UpdateEventAdminRequest;
+import ru.practicum.ewm.dto.event.response.EventFullDto;
+import ru.practicum.ewm.dto.event.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.main.server.category.Category;
 import ru.practicum.ewm.main.server.category.CategoryService;
+import ru.practicum.ewm.main.server.event.model.Event;
+import ru.practicum.ewm.main.server.event.EventMapper;
+import ru.practicum.ewm.main.server.event.EventService;
+import ru.practicum.ewm.main.server.event.StatsTracker;
 import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-import static ru.practicum.ewm.dto.stats.DateTimeFormats.EWM_PATTERN;
+import static ru.practicum.ewm.dto.stats.date.DateTimeFormats.EWM_PATTERN;
 
 @RestController
 @RequestMapping("/admin/events")

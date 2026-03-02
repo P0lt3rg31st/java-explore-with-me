@@ -1,6 +1,5 @@
 package ru.practicum.ewm.main.server.category;
 
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -15,21 +14,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryService {
 
-    //TODO: переписать
-
     private final CategoryRepository categoryRepository;
-    private final EntityManager em;
 
     @Transactional(readOnly = true)
     public List<Category> findAll(int from, int size) {
         validatePagination(from, size);
-
-        List<Long> ids = categoryRepository.findIdsWithOffset(from, size);
-        if (ids.isEmpty()) {
-            return List.of();
-        }
-
-        return categoryRepository.findAllByIdInOrdered(ids);
+        return categoryRepository.findAllWithOffset(from, size);
     }
 
     @Transactional(readOnly = true)

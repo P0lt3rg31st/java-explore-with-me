@@ -1,29 +1,28 @@
-package ru.practicum.ewm.dto.event;
+package ru.practicum.ewm.dto.event.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+import ru.practicum.ewm.dto.event.common.Location;
+import ru.practicum.ewm.dto.event.state.UserEventStateAction;
 
 import java.time.LocalDateTime;
 
-public record NewEventDto(
-        @NotBlank
+public record UpdateEventUserRequest(
         @Size(min = 20, max = 2000)
         String annotation,
 
-        @NotNull
         @Positive
         Long category,
 
-        @NotBlank
         @Size(min = 20, max = 7000)
         String description,
 
-        @NotNull
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime eventDate,
 
-        @NotNull
         @Valid
         Location location,
 
@@ -34,7 +33,8 @@ public record NewEventDto(
 
         Boolean requestModeration,
 
-        @NotBlank
+        UserEventStateAction stateAction,
+
         @Size(min = 3, max = 120)
         String title
 ) {

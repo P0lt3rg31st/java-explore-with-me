@@ -1,4 +1,4 @@
-package ru.practicum.ewm.main.server.category;
+package ru.practicum.ewm.main.server.category.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +7,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.category.CategoryDto;
 import ru.practicum.ewm.dto.category.NewCategoryDto;
+import ru.practicum.ewm.main.server.category.CategoryMapper;
+import ru.practicum.ewm.main.server.category.CategoryService;
 
 @Validated
 @RestController
