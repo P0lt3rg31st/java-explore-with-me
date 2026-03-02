@@ -2,9 +2,6 @@ package ru.practicum.ewm.main.server.subscription;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.handler.exceptions.BadRequestException;
@@ -70,24 +67,25 @@ public class SubscriptionService {
         validatePagination(from, size);
         requireUser(subscriberId);
 
-        Pageable pageable = toPageable(from, size);
-        return subscriptionRepository.findAllBySubscriber_Id(subscriberId, pageable).getContent();
+        List<Long> ids = subscriptionRepository.findIdsBySubscriberWithOffset(subscriberId, from, size);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return subscriptionRepository.findAllByIdInOrderByIdAsc(ids);
     }
 
     public List<Subscription> findMySubscribers(long targetId, int from, int size) {
         validatePagination(from, size);
         requireUser(targetId);
 
-        Pageable pageable = toPageable(from, size);
-        return subscriptionRepository.findAllByTarget_Id(targetId, pageable).getContent();
+        List<Long> ids = subscriptionRepository.findIdsByTargetWithOffset(targetId, from, size);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return subscriptionRepository.findAllByIdInOrderByIdAsc(ids);
     }
 
     // ===== Helpers =====
-
-    private Pageable toPageable(int from, int size) {
-        int page = from / size;
-        return PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id"));
-    }
 
     private void validateNotSelf(long subscriberId, long targetId) {
         if (subscriberId == targetId) {

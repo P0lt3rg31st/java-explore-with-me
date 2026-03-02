@@ -1,0 +1,4077 @@
+{
+  "info": {
+    "name": "EWM — Unified Postman Collection (main + subscriptions + stats + extras)",
+    "_postman_id": "02f34ec3-5844-48a9-9a6a-56a698d575f4",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Unified, ordered collection built from multiple EWM Postman collections: main-service API tests, subscriptions feature, stats-service tests, plus standalone users/categories and a bug reproduction set.\n\nVariables:\n- baseUrlMain: main-service host (default http://localhost:8080)\n- baseUrlStats: stats-service host (default http://localhost:9090)\n\nNote: original {{baseUrl}} usages were rewritten to {{baseUrlMain}} for main-related suites and {{baseUrlStats}} for stats suite to avoid clashes."
+  },
+  "item": [
+    {
+      "name": "00 — Main service: smoke + negative",
+      "item": [
+        {
+          "name": "00 Setup (creates data for further tests)",
+          "item": [
+            {
+              "name": "01. Admin: create user (initiator)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/users",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"initiator-{{$guid}}@example.com\",\n  \"name\": \"Initiator {{$timestamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.expect(j.id).to.be.a('number');",
+                      "pm.expect(j).to.have.property('email');",
+                      "pm.expect(j).to.have.property('name');",
+                      "pm.collectionVariables.set('userId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02. Admin: create user (requester)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/users",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"requester-{{$guid}}@example.com\",\n  \"name\": \"Requester {{$timestamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.collectionVariables.set('requesterId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03. Admin: create category",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/categories",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{catName}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('catName', `Cat ${Date.now()}`);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.expect(j.name).to.eql(pm.collectionVariables.get('catName'));",
+                      "pm.collectionVariables.set('catId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04. Private: create event (initiator)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"annotation\": \"This is a test annotation with enough length (>=20 chars).\",\n  \"category\": {{catId}},\n  \"description\": \"This is a test description with enough length (>=20 chars).\",\n  \"eventDate\": \"{{eventDate}}\",\n  \"location\": { \"lat\": 55.754167, \"lon\": 37.62 },\n  \"paid\": false,\n  \"participantLimit\": 2,\n  \"requestModeration\": true,\n  \"title\": \"Test event {{$timestamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function pad(n){ return (n<10?'0':'')+n; }",
+                      "function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }",
+                      "const dt = new Date(Date.now() + 3*60*60*1000);",
+                      "pm.collectionVariables.set('eventDate', fmt(dt));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.collectionVariables.set('eventId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "01 Admin: Users",
+          "item": [
+            {
+              "name": "GET /admin/users (smoke)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/users?from=0&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /admin/users?ids=userId&ids=requesterId",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/users?ids={{userId}}&ids={{requesterId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const a = pm.response.json();",
+                      "const ids = a.map(x=>x.id);",
+                      "pm.expect(ids).to.include(Number(pm.collectionVariables.get('userId')));",
+                      "pm.expect(ids).to.include(Number(pm.collectionVariables.get('requesterId')));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "02 Categories (admin + public)",
+          "item": [
+            {
+              "name": "GET /categories (public)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/categories?from=0&size=20"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+                      "const id = Number(pm.collectionVariables.get('catId'));",
+                      "if (id) pm.expect(a.map(x=>x.id)).to.include(id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /categories/{catId}",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/categories/{{catId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('catId')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /admin/categories/{catId}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/categories/{{catId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{catName}} (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().name).to.eql(pm.collectionVariables.get('catName') + ' (updated)');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DELETE /admin/categories/{catId} (expect 409 if has events)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/categories/{{catId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409 Conflict', () => pm.expect([409]).to.include(pm.response.code));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('status');",
+                      "pm.expect(j).to.have.property('reason');",
+                      "pm.expect(j).to.have.property('message');",
+                      "pm.expect(j).to.have.property('timestamp');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "03 Private: Events (initiator)",
+          "item": [
+            {
+              "name": "GET /users/{userId}/events",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events?from=0&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /users/{userId}/events/{eventId}",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events/{{eventId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('eventId')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /users/{userId}/events/{eventId} SEND_TO_REVIEW",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events/{{eventId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Test event UPDATED {{$timestamp}}\",\n  \"annotation\": \"Updated annotation with enough length (>=20 chars).\",\n  \"description\": \"Updated description with enough length (>=20 chars).\",\n  \"eventDate\": \"{{eventDate2}}\",\n  \"stateAction\": \"SEND_TO_REVIEW\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function pad(n){ return (n<10?'0':'')+n; }",
+                      "function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }",
+                      "const dt = new Date(Date.now() + 4*60*60*1000);",
+                      "pm.collectionVariables.set('eventDate2', fmt(dt));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().title).to.contain('UPDATED');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "04 Admin: Events moderation",
+          "item": [
+            {
+              "name": "GET /admin/events (smoke)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/events?from=0&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /admin/events/{eventId} PUBLISH_EVENT",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/events/{{eventId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stateAction\": \"PUBLISH_EVENT\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().state).to.eql('PUBLISHED');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "05 Public: Events",
+          "item": [
+            {
+              "name": "GET /events (public list, should contain eventId)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/events?from=0&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+                      "const id = Number(pm.collectionVariables.get('eventId'));",
+                      "if (id) pm.expect(a.map(x=>x.id)).to.include(id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /events/{id} (public)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/events/{{eventId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('eventId')));",
+                      "pm.expect(pm.response.json().state).to.eql('PUBLISHED');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "06 Participation requests",
+          "item": [
+            {
+              "name": "POST /users/{requesterId}/requests?eventId=...",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{requesterId}}/requests?eventId={{eventId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.collectionVariables.set('requestId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /users/{userId}/events/{eventId}/requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events/{{eventId}}/requests"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+                      "const rid = Number(pm.collectionVariables.get('requestId'));",
+                      "if (rid) pm.expect(a.map(x=>x.id)).to.include(rid);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /users/{userId}/events/{eventId}/requests CONFIRMED",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/users/{{userId}}/events/{{eventId}}/requests",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"requestIds\": [{{requestId}}],\n  \"status\": \"CONFIRMED\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('confirmedRequests');",
+                      "pm.expect(j.confirmedRequests).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /users/{requesterId}/requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{requesterId}}/requests"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /users/{requesterId}/requests/{requestId}/cancel",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{requesterId}}/requests/{{requestId}}/cancel"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.have.property('status');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "07 Compilations (admin + public)",
+          "item": [
+            {
+              "name": "POST /admin/compilations",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/compilations",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"events\": [{{eventId}}],\n  \"pinned\": false,\n  \"title\": \"{{compTitle}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('compTitle', `Comp ${Date.now()}`);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('id');",
+                      "pm.collectionVariables.set('compId', j.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /compilations/{compId}",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/compilations/{{compId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('compId')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /compilations (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/compilations?from=0&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.expect(pm.response.json()).to.be.an('array');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PATCH /admin/compilations/{compId}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/compilations/{{compId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pinned\": true,\n  \"title\": \"{{compTitle}} (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j.pinned).to.eql(true);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DELETE /admin/compilations/{compId}",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/compilations/{{compId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "90 Negative tests",
+          "item": [
+            {
+              "name": "GET /admin/users?from=-1 (must be 400)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/users?from=-1&size=10"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "const j = pm.response.json();",
+                      "pm.expect(j).to.have.property('status');",
+                      "pm.expect(j).to.have.property('reason');",
+                      "pm.expect(j).to.have.property('message');",
+                      "pm.expect(j).to.have.property('timestamp');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET /categories?size=ad (400)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/categories?from=0&size=ad"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.expect(pm.response.json()).to.have.property('message');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST duplicate participation request (409)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{requesterId}}/requests?eventId={{eventId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409 Conflict', () => pm.expect(pm.response.code).to.eql(409));",
+                      "pm.expect(pm.response.json()).to.have.property('message');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "99 Cleanup (disabled by default)",
+          "item": [
+            {
+              "name": "DELETE /admin/users/{userId} (optional cleanup)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/users/{{userId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "disabled": true
+            },
+            {
+              "name": "DELETE /admin/users/{requesterId} (optional cleanup)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/admin/users/{{requesterId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "disabled": true
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const v = pm.collectionVariables.get('baseUrlMain');",
+              "if (!v || String(v).trim().length===0) {",
+              "  pm.collectionVariables.set('baseUrlMain','http://localhost:8080');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "description": "Smoke + negative API tests for Explore With Me main-service. URLs are strings to avoid Postman import issues."
+    },
+    {
+      "name": "01 — Subscriptions feature",
+      "item": [
+        {
+          "name": "Subscriptions",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Init baseUrl + generate unique runId once per Runner iteration.",
+                  "// This prevents 409 conflicts on /admin/users when you re-run the collection.",
+                  "const baseUrl = pm.collectionVariables.get(\"baseUrlMain\");",
+                  "if (!baseUrl || baseUrl.trim().length === 0) {",
+                  "  pm.collectionVariables.set(\"baseUrlMain\", \"http://localhost:8080\");",
+                  "}",
+                  "",
+                  "// Generate a new runId only when the iteration changes (Runner/Newman).",
+                  "const iter = (pm.info && typeof pm.info.iteration === \"number\") ? pm.info.iteration : 0;",
+                  "const marker = pm.collectionVariables.get(\"runIteration\");",
+                  "",
+                  "if (marker !== String(iter)) {",
+                  "  pm.collectionVariables.set(\"runIteration\", String(iter));",
+                  "",
+                  "  const guid = pm.variables.replaceIn(\"{{$guid}}\");",
+                  "  pm.collectionVariables.set(\"runId\", `${Date.now()}_${iter}_${guid}`);",
+                  "",
+                  "  // Clear IDs to avoid stale values if something fails early",
+                  "  [\"subscriberId\",\"targetAId\",\"targetBId\",\"subscriptionAId\",\"subscriptionBId\"].forEach(k => {",
+                  "    pm.collectionVariables.unset(k);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "Setup - Create subscriber",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/users",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"sub_{{runId}}\",\n  \"email\": \"sub_{{runId}}@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body.id).to.be.a(\"number\");",
+                      "pm.collectionVariables.set(\"subscriberId\", body.id.toString());"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Setup - Create target A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/users",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"targetA_{{runId}}\",\n  \"email\": \"targetA_{{runId}}@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body.id).to.be.a(\"number\");",
+                      "pm.collectionVariables.set(\"targetAId\", body.id.toString());"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Setup - Create target B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrlMain}}/admin/users",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"targetB_{{runId}}\",\n  \"email\": \"targetB_{{runId}}@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body.id).to.be.a(\"number\");",
+                      "pm.collectionVariables.set(\"targetBId\", body.id.toString());"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - Subscribe to target A",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{targetAId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "",
+                      "const subscriberId = Number(pm.collectionVariables.get(\"subscriberId\"));",
+                      "const targetAId = Number(pm.collectionVariables.get(\"targetAId\"));",
+                      "",
+                      "expectSubscriptionDto(body, subscriberId, targetAId);",
+                      "pm.collectionVariables.set(\"subscriptionAId\", body.id.toString());"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - Subscribe to target B",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{targetBId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "",
+                      "const subscriberId = Number(pm.collectionVariables.get(\"subscriberId\"));",
+                      "const targetBId = Number(pm.collectionVariables.get(\"targetBId\"));",
+                      "",
+                      "expectSubscriptionDto(body, subscriberId, targetBId);",
+                      "pm.collectionVariables.set(\"subscriptionBId\", body.id.toString());"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - Duplicate subscribe to target A -> 409",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{targetAId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(409);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - Self subscribe -> 400",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{subscriberId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(400);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - Missing targetId -> 400",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(400);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - targetId not found -> 404",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId=999999999"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(404);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "POST - subscriberId not found -> 404",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/999999999/subscriptions?targetId={{targetAId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(404);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - My subscriptions (from=0,size=10) contains A and B",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=0&size=10"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "",
+                      "const aId = Number(pm.collectionVariables.get(\"subscriptionAId\"));",
+                      "const bId = Number(pm.collectionVariables.get(\"subscriptionBId\"));",
+                      "",
+                      "const ids = body.map(x => x.id);",
+                      "",
+                      "pm.test(\"Contains subscription A\", () => pm.expect(ids).to.include(aId));",
+                      "pm.test(\"Contains subscription B\", () => pm.expect(ids).to.include(bId));",
+                      "",
+                      "// Optional: sorted by id ASC (if implemented)",
+                      "pm.test(\"Sorted by id ASC (if applicable)\", () => {",
+                      "  for (let i = 1; i < ids.length; i++) {",
+                      "    pm.expect(ids[i]).to.be.at.least(ids[i - 1]);",
+                      "  }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - Offset pagination check (from=1,size=10) returns only B",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=1&size=10"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "",
+                      "// If 'from' is treated as page number instead of offset, you'll likely get empty here (offset=10)",
+                      "pm.test(\"Exactly one item returned\", () => pm.expect(body.length).to.eql(1));",
+                      "",
+                      "const bId = Number(pm.collectionVariables.get(\"subscriptionBId\"));",
+                      "pm.test(\"That item is subscription B\", () => pm.expect(body[0].id).to.eql(bId));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - My subscriptions (from=0,size=1) returns first item (A)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=0&size=1"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "pm.expect(body.length).to.eql(1);",
+                      "",
+                      "const aId = Number(pm.collectionVariables.get(\"subscriptionAId\"));",
+                      "pm.test(\"First item is subscription A\", () => pm.expect(body[0].id).to.eql(aId));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - My subscriptions (from=1,size=1) returns second item (B)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=1&size=1"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "pm.expect(body.length).to.eql(1);",
+                      "",
+                      "const bId = Number(pm.collectionVariables.get(\"subscriptionBId\"));",
+                      "pm.test(\"Second item is subscription B\", () => pm.expect(body[0].id).to.eql(bId));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - Subscribers of target A contains subscriber",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{targetAId}}/subscriptions/subscribers?from=0&size=10"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "",
+                      "const subId = Number(pm.collectionVariables.get(\"subscriberId\"));",
+                      "const targetAId = Number(pm.collectionVariables.get(\"targetAId\"));",
+                      "const aId = Number(pm.collectionVariables.get(\"subscriptionAId\"));",
+                      "",
+                      "const item = body.find(x => x.id === aId);",
+                      "",
+                      "pm.test(\"Contains subscriptionA record\", () => pm.expect(item).to.exist);",
+                      "pm.test(\"Correct subscriber/target ids\", () => {",
+                      "  pm.expect(item.subscriber.id).to.eql(subId);",
+                      "  pm.expect(item.target.id).to.eql(targetAId);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - Pagination validation: from < 0 -> 400",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=-1&size=10"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(400);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - Pagination validation: size <= 0 -> 400",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=0&size=0"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(400);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DELETE - Unsubscribe from target A -> 204",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{targetAId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectNoContent();"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DELETE - Unsubscribe again (not found) -> 404",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?targetId={{targetAId}}"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(404);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DELETE - Missing targetId -> 400",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "expectApiError(400);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET - After delete: list contains B but not A",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrlMain}}/users/{{subscriberId}}/subscriptions?from=0&size=10"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "function jsonOrNull() {",
+                      "  try { return pm.response.json(); } catch (e) { return null; }",
+                      "}",
+                      "",
+                      "function expectApiError(code) {",
+                      "  pm.test(`Status code is ${code}`, () => pm.response.to.have.status(code));",
+                      "  const body = jsonOrNull();",
+                      "  pm.test(\"Error body is present\", () => {",
+                      "    if (body === null) {",
+                      "      pm.expect(pm.response.text()).to.be.a(\"string\").and.not.empty;",
+                      "      return;",
+                      "    }",
+                      "    pm.expect(body).to.be.an(\"object\");",
+                      "    pm.expect(body).to.have.property(\"message\");",
+                      "    pm.expect(body).to.have.property(\"status\");",
+                      "    pm.expect(body).to.have.property(\"timestamp\");",
+                      "  });",
+                      "}",
+                      "",
+                      "function expectNoContent() {",
+                      "  pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                      "  pm.test(\"Body is empty\", () => pm.expect(pm.response.text() || \"\").to.eql(\"\"));",
+                      "}",
+                      "",
+                      "function expectSubscriptionDto(body, subscriberId, targetId) {",
+                      "  pm.expect(body).to.be.an(\"object\");",
+                      "  pm.expect(body.id).to.be.a(\"number\");",
+                      "",
+                      "  pm.expect(body).to.have.property(\"subscriber\");",
+                      "  pm.expect(body.subscriber).to.be.an(\"object\");",
+                      "  pm.expect(body.subscriber.id).to.eql(subscriberId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"target\");",
+                      "  pm.expect(body.target).to.be.an(\"object\");",
+                      "  pm.expect(body.target.id).to.eql(targetId);",
+                      "",
+                      "  pm.expect(body).to.have.property(\"createdOn\");",
+                      "  pm.expect(body.createdOn).to.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/);",
+                      "}",
+                      "",
+                      "",
+                      "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.expect(body).to.be.an(\"array\");",
+                      "",
+                      "const aId = Number(pm.collectionVariables.get(\"subscriptionAId\"));",
+                      "const bId = Number(pm.collectionVariables.get(\"subscriptionBId\"));",
+                      "",
+                      "const ids = body.map(x => x.id);",
+                      "pm.test(\"Does NOT contain subscription A anymore\", () => pm.expect(ids).to.not.include(aId));",
+                      "pm.test(\"Still contains subscription B\", () => pm.expect(ids).to.include(bId));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "description": "Postman tests for ExploreWithMe subscriptions feature (create/delete/list + edge cases + validation).\n\nv2: runId regenerated per Runner iteration to avoid 409 conflicts; clears stale ids."
+    },
+    {
+      "name": "02 — BugRepro: public /events filters",
+      "item": [
+        {
+          "name": "00 - Init variables",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('baseUrlMain')) pm.collectionVariables.set('baseUrlMain', 'http://localhost:8080');",
+                  "if (!pm.collectionVariables.get('ts')) pm.collectionVariables.set('ts', Date.now().toString());",
+                  "",
+                  "const ts = pm.collectionVariables.get('ts');",
+                  "pm.collectionVariables.set('catName', `BugCat ${ts}`);",
+                  "pm.collectionVariables.set('userName', `BugUser ${ts}`);",
+                  "pm.collectionVariables.set('userEmail', `bug${ts}@example.com`);",
+                  "pm.collectionVariables.set('marker', `BUGFILTER_${ts}`);",
+                  "pm.collectionVariables.set('paidTitle', `Paid ${pm.collectionVariables.get('marker')}`);",
+                  "pm.collectionVariables.set('freeTitle', `Free ${pm.collectionVariables.get('marker')}`);",
+                  "",
+                  "// use a far future date to avoid time-window issues (format: yyyy-MM-dd HH:mm:ss)",
+                  "pm.collectionVariables.set('eventDate1', '2035-12-31 15:10:05');",
+                  "pm.collectionVariables.set('eventDate2', '2036-01-01 15:10:05');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrlMain}}/"
+          },
+          "response": []
+        },
+        {
+          "name": "01 - Admin: create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{catName}}\"\n}"
+            },
+            "url": "{{baseUrlMain}}/admin/categories"
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Admin: create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": "{{baseUrlMain}}/admin/users"
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Private: create PAID event (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"annotation\": \"{{marker}} paid annotation - long enough for validation\",\n  \"category\": {{catId}},\n  \"description\": \"{{marker}} paid description - long enough for validation and search\",\n  \"eventDate\": \"{{eventDate1}}\",\n  \"location\": {\"lat\": 55.754167, \"lon\": 37.62},\n  \"paid\": true,\n  \"participantLimit\": 10,\n  \"requestModeration\": true,\n  \"title\": \"{{paidTitle}}\"\n}"
+            },
+            "url": "{{baseUrlMain}}/users/{{userId}}/events"
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Admin: publish PAID event",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stateAction\": \"PUBLISH_EVENT\"\n}"
+            },
+            "url": "{{baseUrlMain}}/admin/events/{{paidEventId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Private: create FREE event (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"annotation\": \"{{marker}} free annotation - long enough for validation\",\n  \"category\": {{catId}},\n  \"description\": \"{{marker}} free description - long enough for validation and search\",\n  \"eventDate\": \"{{eventDate2}}\",\n  \"location\": {\"lat\": 55.754167, \"lon\": 37.62},\n  \"paid\": false,\n  \"participantLimit\": 10,\n  \"requestModeration\": true,\n  \"title\": \"{{freeTitle}}\"\n}"
+            },
+            "url": "{{baseUrlMain}}/users/{{userId}}/events"
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Admin: publish FREE event",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stateAction\": \"PUBLISH_EVENT\"\n}"
+            },
+            "url": "{{baseUrlMain}}/admin/events/{{freeEventId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Public: search events (paid=true) MUST return exactly PAID event",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/events?text={{marker}}&categories={{catId}}&paid=true&onlyAvailable=false&sort=EVENT_DATE&from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "text",
+                  "value": "{{marker}}"
+                },
+                {
+                  "key": "categories",
+                  "value": "{{catId}}"
+                },
+                {
+                  "key": "paid",
+                  "value": "true"
+                },
+                {
+                  "key": "onlyAvailable",
+                  "value": "false"
+                },
+                {
+                  "key": "sort",
+                  "value": "EVENT_DATE"
+                },
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Public: search events (paid=false) MUST return exactly FREE event",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/events?text={{marker}}&categories={{catId}}&paid=false&onlyAvailable=false&sort=EVENT_DATE&from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "text",
+                  "value": "{{marker}}"
+                },
+                {
+                  "key": "categories",
+                  "value": "{{catId}}"
+                },
+                {
+                  "key": "paid",
+                  "value": "false"
+                },
+                {
+                  "key": "onlyAvailable",
+                  "value": "false"
+                },
+                {
+                  "key": "sort",
+                  "value": "EVENT_DATE"
+                },
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 - Public: search events (paid omitted) MUST return BOTH events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/events?text={{marker}}&categories={{catId}}&onlyAvailable=false&sort=EVENT_DATE&from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "text",
+                  "value": "{{marker}}"
+                },
+                {
+                  "key": "categories",
+                  "value": "{{catId}}"
+                },
+                {
+                  "key": "onlyAvailable",
+                  "value": "false"
+                },
+                {
+                  "key": "sort",
+                  "value": "EVENT_DATE"
+                },
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Collection-level safety init (so you can run from any request)",
+              "if (!pm.collectionVariables.get('baseUrlMain')) pm.collectionVariables.set('baseUrlMain', 'http://localhost:8080');",
+              "if (!pm.collectionVariables.get('ts')) pm.collectionVariables.set('ts', Date.now().toString());"
+            ]
+          }
+        }
+      ],
+      "description": "Repro for /events search filters mismatch: create category+user, create 2 events (paid/free) with same category and unique text marker, publish them, then search with paid=true/false/absent and assert exact results."
+    },
+    {
+      "name": "03 — Categories (standalone)",
+      "item": [
+        {
+          "name": "01 — Admin: Create category (201) + save id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const name = `cat-${Date.now()}-${Math.floor(Math.random()*100000)}`;",
+                  "pm.collectionVariables.set('catName', name);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response is JSON', () => pm.response.headers.get('Content-Type')?.includes('application/json'));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has id and name', () => {",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('name');",
+                  "});",
+                  "pm.test('Name equals sent name', () => {",
+                  "  pm.expect(body.name).to.eql(pm.collectionVariables.get('catName'));",
+                  "});",
+                  "pm.collectionVariables.set('catId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{catName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 — Public: Get categories list (200) [from/size]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is JSON array', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/categories?from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 — Public: Get category by id (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('catId is set', () => pm.expect(Number(pm.collectionVariables.get('catId'))).to.be.greaterThan(0));",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('id matches', () => pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('catId'))));",
+                  "pm.test('name matches', () => pm.expect(body.name).to.eql(pm.collectionVariables.get('catName')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/categories/{{catId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "categories",
+                "{{catId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 — Admin: Update category (PATCH, 200)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const updated = `cat-upd-${Date.now()}-${Math.floor(Math.random()*100000)}`;",
+                  "pm.collectionVariables.set('catNameUpdated', updated);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('id matches', () => pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('catId'))));",
+                  "pm.test('name updated', () => pm.expect(body.name).to.eql(pm.collectionVariables.get('catNameUpdated')));",
+                  "pm.collectionVariables.set('catName', body.name);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{catId}},\n  \"name\": \"{{catNameUpdated}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories/{{catId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories",
+                "{{catId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 — Admin: Delete category (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories/{{catId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories",
+                "{{catId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 — Public: Get deleted category (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/categories/{{catId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "categories",
+                "{{catId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 — Admin: Create duplicate setup (201) + save dupId",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dup = `dup-${Date.now()}-${Math.floor(Math.random()*100000)}`;",
+                  "pm.collectionVariables.set('dupName', dup);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('dupId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{dupName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 — Admin: Create duplicate (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{dupName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09 — Admin: Create invalid (blank name) (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"   \"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10 — Admin: Cleanup duplicate (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/categories/{{dupId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "categories",
+                "{{dupId}}"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Public + Admin endpoints for Categories (CRUD + negative cases)."
+    },
+    {
+      "name": "04 — Admin Users (standalone)",
+      "item": [
+        {
+          "name": "1) POST Create user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rnd = Math.random().toString(16).slice(2);",
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set('userName', 'Test User ' + ts);",
+                  "pm.collectionVariables.set('userEmail', `user_${ts}_${rnd}@example.com`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2) GET Users list (from=0,size=10)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users?from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3) GET Users by ids (ids={{userId}})",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users?ids={{userId}}&from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{userId}}"
+                },
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4) POST Duplicate email -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Another Name\",\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5) DELETE user ({{userId}}) -> 204",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users/{{userId}}",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6) GET by ids after delete -> []",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users?ids={{userId}}&from=0&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{userId}}"
+                },
+                {
+                  "key": "from",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7) DELETE missing user -> 404",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users/999999999",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "999999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "8) GET invalid pagination -> 400 (from=-1,size=10)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrlMain}}/admin/users?from=-1&size=10",
+              "host": [
+                "{{baseUrlMain}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "-1"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "  const method = pm.request.method;",
+              "  const urlStr = pm.request.url.toString();",
+              "  const status = pm.response.code;",
+              "",
+              "  // normalize path без домена",
+              "  let path = urlStr.replace(/^https?:\\/\\/[^/]+/i, '');",
+              "  path = path.split('?')[0];",
+              "",
+              "  const hasIdsParam = urlStr.includes('ids=');",
+              "",
+              "  function setVar(k, v) { pm.collectionVariables.set(k, String(v)); }",
+              "  function getVar(k) { return pm.collectionVariables.get(k); }",
+              "  function hasVar(k) {",
+              "    const v = getVar(k);",
+              "    return v !== undefined && v !== null && String(v).length > 0;",
+              "  }",
+              "",
+              "  function asJson() {",
+              "    try { return pm.response.json(); } catch (e) { return null; }",
+              "  }",
+              "",
+              "  function assertArrayUsers(arr) {",
+              "    pm.expect(arr).to.be.an('array');",
+              "    arr.forEach(u => {",
+              "      pm.expect(u).to.be.an('object');",
+              "      pm.expect(u).to.have.property('id');",
+              "      pm.expect(u).to.have.property('name');",
+              "      pm.expect(u).to.have.property('email');",
+              "    });",
+              "  }",
+              "",
+              "  // ---------- POST /admin/users (create or duplicate) ----------",
+              "  if (method === 'POST' && path === '/admin/users') {",
+              "    if (status === 201) {",
+              "      pm.test('POST /admin/users -> 201', function () {",
+              "        pm.expect(status).to.eql(201);",
+              "      });",
+              "      const body = asJson();",
+              "      pm.test('Create response is valid UserDto', function () {",
+              "        pm.expect(body).to.be.an('object');",
+              "        pm.expect(body).to.have.property('id');",
+              "        pm.expect(body.id).to.be.a('number');",
+              "        pm.expect(body).to.have.property('name');",
+              "        pm.expect(body).to.have.property('email');",
+              "      });",
+              "      setVar('userId', body.id);",
+              "      setVar('userName', body.name);",
+              "      setVar('userEmail', body.email);",
+              "      setVar('userDeleted', 'false');",
+              "      return;",
+              "    }",
+              "",
+              "    if (status === 409) {",
+              "      pm.test('POST duplicate -> 409', function () {",
+              "        pm.expect(status).to.eql(409);",
+              "      });",
+              "      return;",
+              "    }",
+              "",
+              "    if (status === 400) {",
+              "      pm.test('POST invalid -> 400', function () {",
+              "        pm.expect(status).to.eql(400);",
+              "      });",
+              "      return;",
+              "    }",
+              "",
+              "    pm.test('POST unexpected status', function () {",
+              "      pm.expect([201, 409, 400]).to.include(status);",
+              "    });",
+              "    return;",
+              "  }",
+              "",
+              "  // ---------- GET /admin/users (list / by ids / invalid pagination) ----------",
+              "  if (method === 'GET' && path === '/admin/users') {",
+              "    if (status === 400) {",
+              "      pm.test('GET invalid pagination -> 400', function () {",
+              "        pm.expect(status).to.eql(400);",
+              "      });",
+              "      return;",
+              "    }",
+              "",
+              "    pm.test('GET /admin/users -> 200', function () {",
+              "      pm.expect(status).to.eql(200);",
+              "    });",
+              "",
+              "    const body = asJson();",
+              "    pm.test('GET response is array of users', function () {",
+              "      assertArrayUsers(body);",
+              "    });",
+              "",
+              "    if (hasIdsParam && hasVar('userId')) {",
+              "      const createdId = Number(getVar('userId'));",
+              "      const deleted = (getVar('userDeleted') === 'true');",
+              "",
+              "      if (deleted) {",
+              "        pm.test('After delete: GET by ids returns []', function () {",
+              "          pm.expect(body.length).to.eql(0);",
+              "        });",
+              "      } else {",
+              "        pm.test('GET by ids contains created user', function () {",
+              "          const u = body.find(x => x.id === createdId);",
+              "          pm.expect(u, 'User not found in response').to.exist;",
+              "          pm.expect(u.name).to.eql(getVar('userName'));",
+              "          pm.expect(u.email).to.eql(getVar('userEmail'));",
+              "        });",
+              "      }",
+              "    }",
+              "    return;",
+              "  }",
+              "",
+              "  // ---------- DELETE /admin/users/{id} ----------",
+              "  if (method === 'DELETE' && path.startsWith('/admin/users/')) {",
+              "    if (status === 204) {",
+              "      pm.test('DELETE -> 204', function () {",
+              "        pm.expect(status).to.eql(204);",
+              "      });",
+              "      pm.test('DELETE body is empty', function () {",
+              "        pm.expect((pm.response.text() || '').trim()).to.eql('');",
+              "      });",
+              "      setVar('userDeleted', 'true');",
+              "      return;",
+              "    }",
+              "",
+              "    if (status === 404) {",
+              "      pm.test('DELETE missing -> 404', function () {",
+              "        pm.expect(status).to.eql(404);",
+              "      });",
+              "      return;",
+              "    }",
+              "",
+              "    pm.test('DELETE unexpected status', function () {",
+              "      pm.expect([204, 404]).to.include(status);",
+              "    });",
+              "    return;",
+              "  }",
+              "",
+              "  // not our request: do nothing",
+              "  pm.test('Skip (not users admin)', function () {",
+              "    pm.expect(true).to.be.true;",
+              "  });",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Stats service",
+      "item": [
+        {
+          "name": "00 - Health + Init variables",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "  const runId = Date.now().toString();",
+                  "  pm.collectionVariables.set(\"runId\", runId);",
+                  "",
+                  "  pm.collectionVariables.set(\"app\", `ewm-main-postman-${runId}`);",
+                  "  pm.collectionVariables.set(\"uri1\", `/events/postman-${runId}-1`);",
+                  "  pm.collectionVariables.set(\"uri2\", `/events/postman-${runId}-2`);",
+                  "",
+                  "  // fixed timestamps in format: yyyy-MM-dd HH:mm:ss",
+                  "  pm.collectionVariables.set(\"t1\", \"2022-09-06 11:00:23\");",
+                  "  pm.collectionVariables.set(\"t2\", \"2022-09-06 11:00:24\");",
+                  "  pm.collectionVariables.set(\"t3\", \"2022-09-06 11:00:25\");",
+                  "",
+                  "  pm.collectionVariables.set(\"start\", \"2022-09-06 11:00:00\");",
+                  "  pm.collectionVariables.set(\"end\",   \"2022-09-06 12:00:00\");",
+                  "",
+                  "  // for negative case start > end",
+                  "  pm.collectionVariables.set(\"badStart\", \"2022-09-06 12:00:00\");",
+                  "  pm.collectionVariables.set(\"badEnd\",   \"2022-09-06 11:00:00\");",
+                  "",
+                  "pm.test(\"Health is UP\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql(\"UP\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/actuator/health",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "01 - POST /hit #1 (uri1, ip1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Created\", function () {",
+                  "  pm.expect([200,201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app\": \"{{app}}\",\n  \"uri\": \"{{uri1}}\",\n  \"ip\": \"10.0.0.1\",\n  \"timestamp\": \"{{t1}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlStats}}/hit",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "hit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - POST /hit #2 (uri1, ip2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Created\", function () {",
+                  "  pm.expect([200,201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app\": \"{{app}}\",\n  \"uri\": \"{{uri1}}\",\n  \"ip\": \"10.0.0.2\",\n  \"timestamp\": \"{{t2}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlStats}}/hit",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "hit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - POST /hit #3 (uri2, ip1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Created\", function () {",
+                  "  pm.expect([200,201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app\": \"{{app}}\",\n  \"uri\": \"{{uri2}}\",\n  \"ip\": \"10.0.0.1\",\n  \"timestamp\": \"{{t3}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlStats}}/hit",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "hit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 - GET /stats (unique=false, all uris)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"OK\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const arr = pm.response.json();",
+                  "pm.expect(Array.isArray(arr)).to.be.true;",
+                  "",
+                  "const app = pm.collectionVariables.get(\"app\");",
+                  "const uri1 = pm.collectionVariables.get(\"uri1\");",
+                  "const uri2 = pm.collectionVariables.get(\"uri2\");",
+                  "",
+                  "function findStat(uri) {",
+                  "  return arr.find(x => x.app === app && x.uri === uri);",
+                  "}",
+                  "",
+                  "const s1 = findStat(uri1);",
+                  "const s2 = findStat(uri2);",
+                  "",
+                  "pm.test(\"Aggregated hits (non-unique)\", function () {",
+                  "  pm.expect(s1, \"stat for uri1 exists\").to.exist;",
+                  "  pm.expect(s2, \"stat for uri2 exists\").to.exist;",
+                  "  pm.expect(Number(s1.hits)).to.eql(2);",
+                  "  pm.expect(Number(s2.hits)).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?start={{start}}&end={{end}}&unique=false",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 - GET /stats (unique=true, all uris)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"OK\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const arr = pm.response.json();",
+                  "pm.expect(Array.isArray(arr)).to.be.true;",
+                  "",
+                  "const app = pm.collectionVariables.get(\"app\");",
+                  "const uri1 = pm.collectionVariables.get(\"uri1\");",
+                  "const uri2 = pm.collectionVariables.get(\"uri2\");",
+                  "",
+                  "function findStat(uri) {",
+                  "  return arr.find(x => x.app === app && x.uri === uri);",
+                  "}",
+                  "",
+                  "const s1 = findStat(uri1);",
+                  "const s2 = findStat(uri2);",
+                  "",
+                  "pm.test(\"Aggregated hits (unique by ip)\", function () {",
+                  "  pm.expect(s1, \"stat for uri1 exists\").to.exist;",
+                  "  pm.expect(s2, \"stat for uri2 exists\").to.exist;",
+                  "  pm.expect(Number(s1.hits)).to.eql(2);",
+                  "  pm.expect(Number(s2.hits)).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?start={{start}}&end={{end}}&unique=true",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - GET /stats (filter uris=uri1, unique=false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"OK\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const arr = pm.response.json();",
+                  "pm.expect(Array.isArray(arr)).to.be.true;",
+                  "",
+                  "const app = pm.collectionVariables.get(\"app\");",
+                  "const uri1 = pm.collectionVariables.get(\"uri1\");",
+                  "",
+                  "pm.test(\"Only uri1 returned\", function () {",
+                  "  pm.expect(arr.length).to.eql(1);",
+                  "  pm.expect(arr[0].app).to.eql(app);",
+                  "  pm.expect(arr[0].uri).to.eql(uri1);",
+                  "  pm.expect(Number(arr[0].hits)).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?start={{start}}&end={{end}}&uris={{uri1}}&unique=false",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end}}"
+                },
+                {
+                  "key": "uris",
+                  "value": "{{uri1}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 - GET /stats (multiple uris=uri1&uris=uri2, unique=false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"OK\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const arr = pm.response.json();",
+                  "pm.expect(Array.isArray(arr)).to.be.true;",
+                  "",
+                  "const app = pm.collectionVariables.get(\"app\");",
+                  "const uri1 = pm.collectionVariables.get(\"uri1\");",
+                  "const uri2 = pm.collectionVariables.get(\"uri2\");",
+                  "",
+                  "function findStat(uri) {",
+                  "  return arr.find(x => x.app === app && x.uri === uri);",
+                  "}",
+                  "",
+                  "const s1 = findStat(uri1);",
+                  "const s2 = findStat(uri2);",
+                  "",
+                  "pm.test(\"Both uris returned with correct hits\", function () {",
+                  "  pm.expect(s1).to.exist;",
+                  "  pm.expect(s2).to.exist;",
+                  "  pm.expect(Number(s1.hits)).to.eql(2);",
+                  "  pm.expect(Number(s2.hits)).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?start={{start}}&end={{end}}&uris={{uri1}}&uris={{uri2}}&unique=false",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end}}"
+                },
+                {
+                  "key": "uris",
+                  "value": "{{uri1}}"
+                },
+                {
+                  "key": "uris",
+                  "value": "{{uri2}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 - NEGATIVE: POST /hit missing app (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uri\": \"{{uri1}}\",\n  \"ip\": \"10.0.0.1\",\n  \"timestamp\": \"{{t1}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlStats}}/hit",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "hit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 - NEGATIVE: POST /hit bad timestamp format (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app\": \"{{app}}\",\n  \"uri\": \"{{uri1}}\",\n  \"ip\": \"10.0.0.1\",\n  \"timestamp\": \"2022/09/06 11:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlStats}}/hit",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "hit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 - NEGATIVE: GET /stats missing start (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?end={{end}}&unique=false",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "end",
+                  "value": "{{end}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 - NEGATIVE: GET /stats start > end (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// cleanup: avoid reusing variables across manual runs",
+                  "pm.collectionVariables.unset(\"runId\");",
+                  "pm.collectionVariables.unset(\"app\");",
+                  "pm.collectionVariables.unset(\"uri1\");",
+                  "pm.collectionVariables.unset(\"uri2\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlStats}}/stats?start={{badStart}}&end={{badEnd}}&unique=false",
+              "host": [
+                "{{baseUrlStats}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{badStart}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{badEnd}}"
+                },
+                {
+                  "key": "unique",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Deterministic Postman tests for stats-service: health, POST /hit, GET /stats (unique/non-unique, uris filter), negative cases + start>end + multiple uris."
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('baseUrlMain')) pm.collectionVariables.set('baseUrlMain','http://localhost:8080');",
+          "if (!pm.collectionVariables.get('baseUrlStats')) pm.collectionVariables.set('baseUrlStats','http://localhost:9090');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrlMain",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "baseUrlStats",
+      "value": "http://localhost:9090",
+      "type": "string"
+    }
+  ]
+}
