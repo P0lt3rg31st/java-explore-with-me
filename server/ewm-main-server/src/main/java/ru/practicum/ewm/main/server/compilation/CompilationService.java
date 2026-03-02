@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.handler.exceptions.NotFoundException;
-import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.event.EventRepository;
+import ru.practicum.ewm.main.server.event.model.Event;
 
 import java.util.*;
 import java.util.stream.Collectors;

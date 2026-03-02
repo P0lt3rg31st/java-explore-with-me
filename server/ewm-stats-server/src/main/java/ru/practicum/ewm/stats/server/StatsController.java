@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 import ru.practicum.ewm.dto.stats.EndpointHit;
 import ru.practicum.ewm.dto.stats.ViewStats;
+import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 import ru.practicum.ewm.stats.server.mapper.HitMapper;
 
 import java.time.LocalDateTime;

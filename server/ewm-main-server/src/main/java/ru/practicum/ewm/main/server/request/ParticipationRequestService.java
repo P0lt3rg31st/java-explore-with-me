@@ -8,8 +8,8 @@ import ru.practicum.ewm.dto.handler.exceptions.BadRequestException;
 import ru.practicum.ewm.dto.handler.exceptions.ConflictException;
 import ru.practicum.ewm.dto.handler.exceptions.NotFoundException;
 import ru.practicum.ewm.dto.request.ParticipationRequestStatus;
-import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.event.EventRepository;
+import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.user.User;
 import ru.practicum.ewm.main.server.user.UserRepository;
 
