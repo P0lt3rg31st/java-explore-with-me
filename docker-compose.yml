@@ -34,6 +34,11 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_LIQUIBASE_ENABLED: "true"
       SPRING_LIQUIBASE_CHANGE_LOG: classpath:db/changelog/db.changelog-master.yaml
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:9090/actuator/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
@@ -47,23 +52,49 @@ services:
     depends_on:
       - stats-server
 
-  # ---- Заготовки под main-service ----
   ewm-db:
     image: postgres:16.1
-    profiles: [ "main" ]
+    container_name: ewm-db
     environment:
       POSTGRES_DB: ewm_main
       POSTGRES_USER: ewm
       POSTGRES_PASSWORD: ewm
     ports:
       - "6542:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ewm -d ewm_main" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - ewm-db-data:/var/lib/postgresql/data
 
   ewm-service:
-    profiles: [ "main" ]
+    build:
+      context: .
+      dockerfile: server/ewm-main-server/Dockerfile
+    container_name: ewm-service
     ports:
       - "8080:8080"
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+      stats-server:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/ewm_main
+      SPRING_DATASOURCE_USERNAME: ewm
+      SPRING_DATASOURCE_PASSWORD: ewm
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+      SPRING_LIQUIBASE_ENABLED: "true"
+      SPRING_LIQUIBASE_CHANGE_LOG: classpath:db.changelog/db.changelog-master.yaml
+
+      # URL для Feign-клиента stats (внутри docker-сети)
+      STATS_SERVER_URL: http://stats-server:9090
 
 volumes:
   stats-db-data:

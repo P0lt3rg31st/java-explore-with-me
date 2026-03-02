@@ -1,4 +1,4 @@
-package ru.practicum.ewm.dto.stats;
+package ru.practicum.ewm.dto.stats.date;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

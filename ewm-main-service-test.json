@@ -1,0 +1,575 @@
+{
+  "info": {
+    "name": "EWM Main Service — API tests (fixed URLs)",
+    "_postman_id": "51c1d5a5-4c8c-4d65-8f4c-5c0b1f1e6a12",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smoke + negative API tests for Explore With Me main-service. URLs are strings to avoid Postman import issues."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "userId", "value": "" },
+    { "key": "requesterId", "value": "" },
+    { "key": "catId", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "requestId", "value": "" },
+    { "key": "compId", "value": "" },
+    { "key": "catName", "value": "" },
+    { "key": "compTitle", "value": "" },
+    { "key": "eventDate", "value": "" },
+    { "key": "eventDate2", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const v = pm.collectionVariables.get('baseUrl');",
+          "if (!v || String(v).trim().length===0) {",
+          "  pm.collectionVariables.set('baseUrl','http://localhost:8080');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Setup (creates data for further tests)",
+      "item": [
+        {
+          "name": "01. Admin: create user (initiator)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"initiator-{{$guid}}@example.com\",\n  \"name\": \"Initiator {{$timestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('id');",
+                  "pm.expect(j.id).to.be.a('number');",
+                  "pm.expect(j).to.have.property('email');",
+                  "pm.expect(j).to.have.property('name');",
+                  "pm.collectionVariables.set('userId', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Admin: create user (requester)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"requester-{{$guid}}@example.com\",\n  \"name\": \"Requester {{$timestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('id');",
+                  "pm.collectionVariables.set('requesterId', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Admin: create category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{catName}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('catName', `Cat ${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('id');",
+                  "pm.expect(j.name).to.eql(pm.collectionVariables.get('catName'));",
+                  "pm.collectionVariables.set('catId', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04. Private: create event (initiator)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users/{{userId}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"annotation\": \"This is a test annotation with enough length (>=20 chars).\",\n  \"category\": {{catId}},\n  \"description\": \"This is a test description with enough length (>=20 chars).\",\n  \"eventDate\": \"{{eventDate}}\",\n  \"location\": { \"lat\": 55.754167, \"lon\": 37.62 },\n  \"paid\": false,\n  \"participantLimit\": 2,\n  \"requestModeration\": true,\n  \"title\": \"Test event {{$timestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function pad(n){ return (n<10?'0':'')+n; }",
+                  "function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }",
+                  "const dt = new Date(Date.now() + 3*60*60*1000);",
+                  "pm.collectionVariables.set('eventDate', fmt(dt));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('id');",
+                  "pm.collectionVariables.set('eventId', j.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Admin: Users",
+      "item": [
+        {
+          "name": "GET /admin/users (smoke)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/admin/users?from=0&size=10" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.be.an('array');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/users?ids=userId&ids=requesterId",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/admin/users?ids={{userId}}&ids={{requesterId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json();",
+                  "const ids = a.map(x=>x.id);",
+                  "pm.expect(ids).to.include(Number(pm.collectionVariables.get('userId')));",
+                  "pm.expect(ids).to.include(Number(pm.collectionVariables.get('requesterId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Categories (admin + public)",
+      "item": [
+        {
+          "name": "GET /categories (public)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/categories?from=0&size=20" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+                  "const id = Number(pm.collectionVariables.get('catId'));",
+                  "if (id) pm.expect(a.map(x=>x.id)).to.include(id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /categories/{catId}",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/categories/{{catId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('catId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /admin/categories/{catId}",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/categories/{{catId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{catName}} (updated)\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().name).to.eql(pm.collectionVariables.get('catName') + ' (updated)');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /admin/categories/{catId} (expect 409 if has events)",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/admin/categories/{{catId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.expect([409]).to.include(pm.response.code));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('status');",
+                  "pm.expect(j).to.have.property('reason');",
+                  "pm.expect(j).to.have.property('message');",
+                  "pm.expect(j).to.have.property('timestamp');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Private: Events (initiator)",
+      "item": [
+        {
+          "name": "GET /users/{userId}/events",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/users/{{userId}}/events?from=0&size=10" },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json()).to.be.an('array');"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "GET /users/{userId}/events/{eventId}",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/users/{{userId}}/events/{{eventId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('eventId')));"
+              ] }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/{userId}/events/{eventId} SEND_TO_REVIEW",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users/{{userId}}/events/{{eventId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test event UPDATED {{$timestamp}}\",\n  \"annotation\": \"Updated annotation with enough length (>=20 chars).\",\n  \"description\": \"Updated description with enough length (>=20 chars).\",\n  \"eventDate\": \"{{eventDate2}}\",\n  \"stateAction\": \"SEND_TO_REVIEW\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "function pad(n){ return (n<10?'0':'')+n; }",
+              "function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }",
+              "const dt = new Date(Date.now() + 4*60*60*1000);",
+              "pm.collectionVariables.set('eventDate2', fmt(dt));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.expect(pm.response.json().title).to.contain('UPDATED');"
+            ] } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Admin: Events moderation",
+      "item": [
+        {
+          "name": "GET /admin/events (smoke)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/admin/events?from=0&size=10" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json()).to.be.an('array');"
+          ] } }]
+        },
+        {
+          "name": "PATCH /admin/events/{eventId} PUBLISH_EVENT",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/events/{{eventId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"stateAction\": \"PUBLISH_EVENT\"\n}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json().state).to.eql('PUBLISHED');"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "05 Public: Events",
+      "item": [
+        {
+          "name": "GET /events (public list, should contain eventId)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/events?from=0&size=10" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+            "const id = Number(pm.collectionVariables.get('eventId'));",
+            "if (id) pm.expect(a.map(x=>x.id)).to.include(id);"
+          ] } }]
+        },
+        {
+          "name": "GET /events/{id} (public)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/events/{{eventId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('eventId')));",
+            "pm.expect(pm.response.json().state).to.eql('PUBLISHED');"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 Participation requests",
+      "item": [
+        {
+          "name": "POST /users/{requesterId}/requests?eventId=...",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/users/{{requesterId}}/requests?eventId={{eventId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json();",
+            "pm.expect(j).to.have.property('id');",
+            "pm.collectionVariables.set('requestId', j.id);"
+          ] } }]
+        },
+        {
+          "name": "GET /users/{userId}/events/{eventId}/requests",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/users/{{userId}}/events/{{eventId}}/requests" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
+            "const rid = Number(pm.collectionVariables.get('requestId'));",
+            "if (rid) pm.expect(a.map(x=>x.id)).to.include(rid);"
+          ] } }]
+        },
+        {
+          "name": "PATCH /users/{userId}/events/{eventId}/requests CONFIRMED",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users/{{userId}}/events/{{eventId}}/requests",
+            "body": { "mode": "raw", "raw": "{\n  \"requestIds\": [{{requestId}}],\n  \"status\": \"CONFIRMED\"\n}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.expect(j).to.have.property('confirmedRequests');",
+            "pm.expect(j.confirmedRequests).to.be.an('array');"
+          ] } }]
+        },
+        {
+          "name": "GET /users/{requesterId}/requests",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/users/{{requesterId}}/requests" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json()).to.be.an('array');"
+          ] } }]
+        },
+        {
+          "name": "PATCH /users/{requesterId}/requests/{requestId}/cancel",
+          "request": { "method": "PATCH", "header": [], "url": "{{baseUrl}}/users/{{requesterId}}/requests/{{requestId}}/cancel" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json()).to.have.property('status');"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "07 Compilations (admin + public)",
+      "item": [
+        {
+          "name": "POST /admin/compilations",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/compilations",
+            "body": { "mode": "raw", "raw": "{\n  \"events\": [{{eventId}}],\n  \"pinned\": false,\n  \"title\": \"{{compTitle}}\"\n}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "pm.collectionVariables.set('compTitle', `Comp ${Date.now()}`);" ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.expect(j).to.have.property('id');",
+              "pm.collectionVariables.set('compId', j.id);"
+            ] } }
+          ]
+        },
+        {
+          "name": "GET /compilations/{compId}",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/compilations/{{compId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('compId')));"
+          ] } }]
+        },
+        {
+          "name": "GET /compilations (list)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/compilations?from=0&size=10" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.expect(pm.response.json()).to.be.an('array');"
+          ] } }]
+        },
+        {
+          "name": "PATCH /admin/compilations/{compId}",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/compilations/{{compId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"pinned\": true,\n  \"title\": \"{{compTitle}} (updated)\"\n}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.expect(j.pinned).to.eql(true);"
+          ] } }]
+        },
+        {
+          "name": "DELETE /admin/compilations/{compId}",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/admin/compilations/{{compId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "90 Negative tests",
+      "item": [
+        {
+          "name": "GET /admin/users?from=-1 (must be 400)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/admin/users?from=-1&size=10" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+            "const j = pm.response.json();",
+            "pm.expect(j).to.have.property('status');",
+            "pm.expect(j).to.have.property('reason');",
+            "pm.expect(j).to.have.property('message');",
+            "pm.expect(j).to.have.property('timestamp');"
+          ] } }]
+        },
+        {
+          "name": "GET /categories?size=ad (400)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/categories?from=0&size=ad" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.expect(pm.response.json()).to.have.property('message');"
+          ] } }]
+        },
+        {
+          "name": "POST duplicate participation request (409)",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/users/{{requesterId}}/requests?eventId={{eventId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('409 Conflict', () => pm.expect(pm.response.code).to.eql(409));",
+            "pm.expect(pm.response.json()).to.have.property('message');"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "99 Cleanup (disabled by default)",
+      "item": [
+        {
+          "name": "DELETE /admin/users/{userId} (optional cleanup)",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/admin/users/{{userId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+          ] } }],
+          "disabled": true
+        },
+        {
+          "name": "DELETE /admin/users/{requesterId} (optional cleanup)",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/admin/users/{{requesterId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+          ] } }],
+          "disabled": true
+        }
+      ]
+    }
+  ]
+}
