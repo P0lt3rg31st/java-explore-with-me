@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db.changelog/changes/004_distance_fn.sql
   - include:
       file: db.changelog/changes/008-fk-event-initiator-on-delete-cascade.sql
+  - include:
+      file: db.changelog/changes/009-create-subscriptions.sql
