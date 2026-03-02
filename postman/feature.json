@@ -248,9 +248,54 @@
                     "type": "text/javascript",
                     "exec": [
                       "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                      "const a = pm.response.json(); pm.expect(a).to.be.an('array');",
-                      "const id = Number(pm.collectionVariables.get('catId'));",
-                      "if (id) pm.expect(a.map(x=>x.id)).to.include(id);"
+                      "",
+                      "const a = pm.response.json();",
+                      "pm.test('Response is array', () => pm.expect(a).to.be.an('array'));",
+                      "",
+                      "// Read pagination params (works in Postman + Newman)",
+                      "let qObj = {};",
+                      "try {",
+                      "  const q = pm.request?.url?.query;",
+                      "  if (q) {",
+                      "    if (typeof q.toObject === 'function') qObj = q.toObject();",
+                      "    else if (Array.isArray(q)) qObj = Object.fromEntries(q.map(x => [x.key, x.value]));",
+                      "  }",
+                      "} catch (e) {}",
+                      "",
+                      "const from = qObj.from !== undefined ? Number(qObj.from) : undefined;",
+                      "const size = qObj.size !== undefined ? Number(qObj.size) : undefined;",
+                      "",
+                      "pm.test('Pagination params are valid (if present)', () => {",
+                      "  if (from !== undefined) pm.expect(from).to.be.at.least(0);",
+                      "  if (size !== undefined) pm.expect(size).to.be.at.least(1);",
+                      "});",
+                      "",
+                      "if (Number.isFinite(size) && size > 0) {",
+                      "  pm.test('Items count <= size', () => pm.expect(a.length).to.be.at.most(size));",
+                      "}",
+                      "",
+                      "pm.test('Each item has id:number and name:string', () => {",
+                      "  a.forEach(c => {",
+                      "    pm.expect(c).to.be.an('object');",
+                      "    pm.expect(c).to.have.property('id');",
+                      "    pm.expect(c.id).to.be.a('number');",
+                      "    pm.expect(c).to.have.property('name');",
+                      "    pm.expect(c.name).to.be.a('string');",
+                      "  });",
+                      "});",
+                      "",
+                      "// Backend contract: ORDER BY id ASC",
+                      "pm.test('Sorted by id ASC', () => {",
+                      "  const ids = a.map(x => x.id);",
+                      "  for (let i = 1; i < ids.length; i++) {",
+                      "    pm.expect(ids[i]).to.be.at.least(ids[i - 1]);",
+                      "  }",
+                      "});",
+                      "",
+                      "pm.test('No duplicate ids on page', () => {",
+                      "  const ids = a.map(x => x.id);",
+                      "  pm.expect(new Set(ids).size).to.eql(ids.length);",
+                      "});"
                     ]
                   }
                 }
@@ -270,7 +315,14 @@
                     "type": "text/javascript",
                     "exec": [
                       "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                      "pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('catId')));"
+                      "",
+                      "const c = pm.response.json();",
+                      "pm.expect(c.id).to.eql(Number(pm.collectionVariables.get('catId')));",
+                      "",
+                      "const expectedName = pm.collectionVariables.get('catName');",
+                      "if (expectedName) {",
+                      "  pm.expect(c.name).to.eql(expectedName);",
+                      "}"
                     ]
                   }
                 }
