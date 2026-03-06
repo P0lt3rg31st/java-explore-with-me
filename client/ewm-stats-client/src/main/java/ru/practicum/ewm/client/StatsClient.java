@@ -2,9 +2,9 @@ package ru.practicum.ewm.client;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 import ru.practicum.ewm.dto.stats.EndpointHit;
 import ru.practicum.ewm.dto.stats.ViewStats;
+import ru.practicum.ewm.dto.stats.date.DateTimeFormats;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

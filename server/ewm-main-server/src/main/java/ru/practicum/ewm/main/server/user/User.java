@@ -20,4 +20,5 @@ public class User {
 
     @Column(nullable = false, length = 254, unique = true)
     private String email;
+
 }

@@ -7,10 +7,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.event.response.EventFullDto;
 import ru.practicum.ewm.dto.event.response.EventShortDto;
-import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.event.EventMapper;
 import ru.practicum.ewm.main.server.event.EventService;
 import ru.practicum.ewm.main.server.event.StatsTracker;
+import ru.practicum.ewm.main.server.event.model.Event;
 import ru.practicum.ewm.main.server.request.ParticipationRequestService;
 
 import java.time.LocalDateTime;
